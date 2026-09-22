@@ -3,6 +3,8 @@
 > Runbook concret, étape par étape, pour finir la campagne sur les quatre hosts : ChatGPT (GPT), Claude Code (CC), claude.ai (CW), Claude Desktop / Cowork (CD). Le protocole générique reste `docs/bench/protocol.md` ; les résultats vont dans `docs/bench/results.md` (je les remplis à partir de ce que tu me colles et du journal).
 > Règle de collage : à chaque étape, colle-moi **la réponse complète du host et l'heure**. Je lis le journal `bench_events` derrière chaque geste.
 
+> **État au 2026-09-22 soir : campagne close.** Blocs 1 à 7 joués (Desktop en partie), résultats et conclusions dans `results.md`, restitution E01-S05 faite. Pilotage automatique utilisé pour finir : Claude Code en `claude -p` headless, claude.ai et ChatGPT par navigateur Playwright. Deux pièges pour une prochaine campagne : sur claude.ai, envoyer le premier message **au moins 12 s après le chargement de la page** (sinon la conversation part sur un instantané local périmé des tools) ; sur ChatGPT, **sélectionner le connecteur par `@nom`** dans le composeur (sinon une question sans action ne voit pas ses tools).
+
 ## 0. Ce qui est acquis (ne pas refaire)
 
 | Host | Geste de rafraîchissement mesuré | Instructions exposées au modèle | Descriptions exposées |

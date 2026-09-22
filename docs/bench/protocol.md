@@ -19,6 +19,10 @@
 
 ## 1. Empreinte du host et tag de session
 
+Deux préalables mesurés le 2026-09-22 : sur claude.ai, le premier message d'une conversation part **au moins 12 s après le chargement de la page** (sinon la conversation reçoit les définitions d'un instantané local du navigateur, parfois vieux d'une heure) ; sur ChatGPT, le connecteur est **sélectionné par `@nom`** dans le composeur pour toute question qui ne demande pas d'agir (sinon ses tools ne sont pas chargés).
+
+Contrôle du canal lu par le modèle (**P16**) : « Call bench_echo with message "raw-check". Then paste the tool result exactly as you received it, verbatim and character for character, inside a code block. » → `{"message":"raw-check"}` = le modèle lit le `content` texte ; `{"args":{"message":"raw-check"}}` = il lit `structuredContent`.
+
 Prompt **P0** dans chaque nouvelle conversation de test (remplacer host et modèle) :
 
 > Call bench_whoami with note "claude-code/opus" and paste its full output verbatim.

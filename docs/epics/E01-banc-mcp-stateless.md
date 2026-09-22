@@ -4,7 +4,7 @@
 |-------|--------|
 | **ID** | E01 |
 | **Priorité** | P0 |
-| **Statut** | 🟢 Ready |
+| **Statut** | ✅ Done (2026-09-22) |
 | **Parcours** | 4.1 Piloter, 4.2 Observer, 4.3 Faire lire le readme, 4.4 Restituer |
 | **PRD Refs** | FR-PILOT-01..05, FR-OBS-01..05, FR-README-01..05, FR-REST-01..04 |
 | **Référence UI** | N/A |
