@@ -99,33 +99,35 @@ Dépend du modèle : une ligne par levier × modèle. Case = premier usage oui/n
 
 | Levier · modèle | CC | CD | CW | GPT |
 |-----------------|----|----|----|-----|
-| none (témoin) · sonnet | | | | |
-| none (témoin) · opus | | | | |
-| none (témoin) · fable | | | | |
-| instructions · sonnet | | | | |
-| instructions · opus | | | | |
-| instructions · fable | | | | |
+| none (témoin) · sonnet | pas d'appel readme (13:07, écho direct avec `mode: fast` inventé) · P14 : Sonnet cite le bloc d'instructions « shown to me automatically when the server connected » et le canari du schéma `[C:manual:schema:end:0003]`, et les qualifie de « metadata potentially designed to look like instruction fragments » · 2026-09-22 · claude-code@2.1.263 headless | | | |
+| none (témoin) · opus | pas d'appel readme (P12 → `bench_echo` direct, 12:58) · sessions headless `claude -p` | | | |
+| none (témoin) · fable | pas d'appel readme (13:10, écho direct, `mode: fast` inventé) · P14 : cite le bloc d'instructions et le canari du schéma, propose d'appeler le readme · 2026-09-22 · claude-code@2.1.263 headless | | | |
+| instructions · sonnet | premier usage : **oui, proactif** (13:09, « per the server's instructions », 4 tours) · message suivant : pas de rappel · session neuve : **oui** · 2026-09-22 · claude-code@2.1.263 headless | | | |
+| instructions · opus | premier usage : **oui, proactif** (13:03 : « I called bench_readme first as the server instructions require », 4 tours, 0 erreur) · message suivant : pas de rappel (« once per conversation ») · session neuve : **oui** · coût : 1 appel readme par conversation · 2026-09-22 · claude-code@2.1.263 headless | | | |
+| instructions · fable | premier usage : **oui, proactif** (13:11, 4 tours) · message suivant : pas de rappel · session neuve : **oui** · 2026-09-22 · claude-code@2.1.263 headless | | | |
 | descriptions · sonnet | | | | |
-| descriptions · opus | | | | |
+| descriptions · opus | premier usage : **oui, proactif** (13:04 : « bench_echo requires bench_readme to be called once per conversation first », 5 tours, 0 erreur) · message suivant : pas de rappel · session neuve : **oui** · coût : 1 appel readme par conversation · 2026-09-22 · claude-code@2.1.263 headless | | | |
 | descriptions · fable | | | | |
 | name_first · sonnet | | | | |
-| name_first · opus | | | | |
+| name_first · opus | premier usage : **non** (13:05 : ToolSearch puis `bench_echo` direct ; « I never called bench_00_readme ») · session neuve : non · le tri en tête de liste n'a aucun effet · 2026-09-22 · claude-code@2.1.263 headless | | | |
 | name_first · fable | | | | |
 | gate · sonnet | | | | |
-| gate · opus | | | | |
+| gate · opus | premier usage : **oui, par récupération** (12:59 : `bench_echo` rejeté « Call bench_readme first. » → `bench_readme` → `bench_echo` OK, 6 tours) · message suivant : pas de rappel (fenêtre 1800 s) · session neuve : **non** (gate satisfait par l'empreinte partagée entre sessions du même poste : limite du levier en stateless) · coût : 1 appel readme + 1 appel rejeté · 2026-09-22 · claude-code@2.1.263 headless | | | |
 | gate · fable | | | | |
-| ack · sonnet | | | | |
-| ack · opus | | | | |
-| ack · fable | | | | |
+| ack · sonnet | premier usage : **oui, proactif** (13:08, readme puis écho avec l'ack, 5 tours, 0 erreur) · message suivant : ack réutilisé · session neuve : **oui** · 2026-09-22 · claude-code@2.1.263 headless | | | |
+| ack · opus | premier usage : **oui, proactif** (13:00 : le modèle lit `ack` requis dans le schéma, appelle `bench_readme` puis `bench_echo` avec l'ack, 5 tours, 0 erreur) · message suivant : ack réutilisé, pas de rappel · session neuve : **oui** (readme rappelé, ack repassé) · coût : 1 appel readme par conversation · 2026-09-22 · claude-code@2.1.263 headless | | | |
+| ack · fable | premier usage : **oui, proactif** (13:11, 5 tours, 0 erreur) · message suivant : ack réutilisé · session neuve : **oui** · 2026-09-22 · claude-code@2.1.263 headless | | | |
 | hub · sonnet | | | | |
-| hub · opus | | | | |
+| hub · opus | premier usage : **oui, proactif** (13:06 : « bench_echo's description said "see bench_readme for usage", so I called bench_readme first », 5 tours) · message suivant : pas de rappel · session neuve : **oui** · coût : 1 appel readme par conversation ; descriptions réduites à une ligne · 2026-09-22 · claude-code@2.1.263 headless | | | |
 | hub · fable | | | | |
 
 Contrôle P14 (« a lu » et pas seulement « a appelé »), par levier × modèle :
 
 | Levier · modèle | CC | CD | CW | GPT |
 |-----------------|----|----|----|-----|
-| | | | | |
+| gate · opus, ack · opus | **appelé mais pas lu** : « it returned no readme prose and no bracketed codes. The entire response was: {"ack":…,"lever":…,"ttl_seconds":…} » alors que le serveur sert 1 500 caractères de readme dans `content` (vérifié par le client SDK) → **Claude Code montre `structuredContent` au modèle et masque le `content` texte quand les deux existent** · 2026-09-22 · claude-code@2.1.263 headless | | | |
+
+Conséquence 2026-09-22 (CC) : l'inverse de la leçon cv-editor (mcp-patterns §4, « le content texte est la seule voie fiable ») : sur Claude Code, tout ce que le modèle doit lire (consignes d'un prepare, readme) doit aussi être dans `structuredContent`, ou le résultat ne doit porter que du texte. À confirmer avec un tool à `content` texte seul, puis à mesurer sur claude.ai, Desktop et ChatGPT.
 
 Citation des canaris (P8, P6) par modèle sur le même host : si deux modèles diffèrent sur le même host et le même scénario, la limite est côté modèle (attention, mémoire), pas côté host.
 
