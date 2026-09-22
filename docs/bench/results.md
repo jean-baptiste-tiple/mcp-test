@@ -8,17 +8,27 @@ Une ligne par couple host × modèle (tag `note` de P0). Les grilles A, B, C son
 
 | Host | Modèle (tag) | client_name@client_version | user_agent | Date |
 |------|--------------|----------------------------|------------|------|
-| Claude Code (CC) | claude-code/sonnet | | | |
-| Claude Code (CC) | claude-code/opus | | | |
-| Claude Code (CC) | claude-code/fable | | | |
+| Claude Code (CC) | claude-code/sonnet | claude-code@2.1.263 | claude-code/2.1.263 (claude-vscode, agent-sdk/0.3.278) | 2026-09-22 |
+| Claude Code (CC) | claude-code/opus | claude-code@2.1.263 | idem | |
+| Claude Code (CC) | claude-code/fable | claude-code@2.1.263 | idem | |
 | Claude Desktop / Cowork (CD) | claude-desktop/… | | | |
-| claude.ai web (CW) | claude-web/… | | | |
+| claude.ai web (CW) | claude-web/… | Anthropic/ClaudeAI@1.0.0 (chat) et Anthropic/Toolbox@1.0.0 (connecteurs) ; validateur d'URL : Anthropic@1.0.0 | Claude-User (chat, connecteurs) ; python-httpx/0.28.1 (validateur) ; IP 160.79.106.x, une IP différente par requête ; protocole 2025-11-25 | 2026-09-22 |
 | ChatGPT developer mode (GPT) | chatgpt/… | | | |
 | MCP Inspector (INS) | inspector/none | | | |
 
 ## Grille A — Moments de lecture
 
 `init` = `initialize` observé, `list` = `tools/list` observé, dans la minute suivant le geste.
+
+Observation 2026-09-22 (CC, `claude mcp add` puis `claude mcp list`) : à chaque test de santé, la séquence est `server/discover` (méthode propriétaire Claude Code, en-tête `Mcp-Protocol-Version: 2026-07-28`, id `server-discover-probe-1`, rejetée par le SDK) → `initialize` (2025-11-25, id 0) → `GET /api/mcp` (tentative de flux SSE, 405 chez nous) → `notifications/initialized` → `tools/list` (4 tools). Deux fois de suite (add, puis list). Aucun appel de tool.
+
+Observation 2026-09-22 (CW, dialogue « Ajouter un connecteur personnalisé ») : chaque validation de l'URL = un `initialize` seul (clientInfo `Anthropic@1.0.0`, `python-httpx`, protocole 2025-11-25), sans `notifications/initialized`, sans `tools/list`, sans GET, sans découverte OAuth ; 4 sondes en 2 minutes depuis 4 IP différentes. Le serveur répond 200 avec un résultat valide (vérifié par rejeu et par le client de référence du SDK).
+
+Observation 2026-09-22 (CW, connecteur accepté en mode « Aucune connexion ») : dans les 6 s qui suivent, deux handshakes complets sous user-agent `Claude-User`, chacun `server/discover` (en-tête `Mcp-Protocol-Version: 2026-07-28`, comme Claude Code) → `initialize` → `notifications/initialized` → `tools/list` (4 tools) ; le premier avec `clientInfo` `Anthropic/Toolbox@1.0.0`, le second `Anthropic/ClaudeAI@1.0.0`. Aucun GET (contrairement à Claude Code). Chaque requête arrive d'une IP différente : le stateless est indispensable côté serveur (aucune affinité de session).
+
+Friction CW 2026-09-22 : avec le mode « Se connecter maintenant » (option en tête du dialogue, sélectionnée par défaut), claude.ai affiche « Impossible de s'inscrire auprès du service de connexion … ajouter un OAuth Client ID » (référence `ofid_…`) sans jamais contacter `/.well-known/…` ni `/register` sur le serveur : l'échec est interne au chemin OAuth du connecteur. Un serveur sans auth doit être ajouté avec « Aucune connexion » explicitement coché ; recréer le connecteur si un premier essai a été fait dans un autre mode.
+
+À instrumenter (suite) : `server/discover` est envoyé par Claude Code et claude.ai avant `initialize` avec un en-tête de protocole 2026-07-28 ; le journal ne garde que la méthode. Journaliser les `params` des méthodes inconnues pour comprendre ce que ces hosts attendent (candidat E02-S02 ou S05).
 
 | Geste | CC | CD | CW | GPT |
 |-------|----|----|----|-----|
