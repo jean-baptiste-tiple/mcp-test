@@ -19,6 +19,7 @@ supabase/.temp/
 # Testing
 test-results/
 playwright-report/
+.playwright-mcp/
 coverage/
 
 # OS

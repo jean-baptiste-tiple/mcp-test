@@ -11,6 +11,12 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-09-22] — Banc : grille D (leviers readme) sur claude.ai et ChatGPT
+**Quoi :** Bloc 4 de la campagne joué sur claude.ai (Opus 5) et ChatGPT via le navigateur Playwright : leviers `ack`, `instructions`, `descriptions`, `hub`, `gate` et témoin `baseline` (P12/P13/P14 + journal serveur). Grille D et table P14 remplies, six frictions P15 ajoutées, empreintes des hosts précisées (pools d'IP rotatifs, `server/discover`, double `initialize` ChatGPT), table des conclusions E01-S05 renseignée. `.playwright-mcp/` (sorties Playwright) ignoré par git.
+**Pourquoi :** Savoir quel levier force la lecture d'un readme sur chaque host : `ack` et `descriptions` partout ; `instructions` et `hub` inopérants sur claude.ai ; `gate` inutilisable derrière les passerelles à IP rotatives ; Claude Code seul à masquer le `content` texte derrière `structuredContent` ; auto-déclarations ChatGPT non fiables.
+**Écarté :** Rejouer chaque levier sur plusieurs modèles claude.ai/ChatGPT et Claude Desktop (bloc 5, Desktop écarté par l'utilisateur) : le levier retenu (`ack`) est déjà identique sur les trois hosts et trois modèles Claude, le gain attendu ne vaut pas le temps de campagne.
+**Fichiers :** docs/bench/results.md, .gitignore, docs/changelog.md
+
 ## [2026-09-22] — E01-S03 Sondes whoami, mutate, readme et leviers readme
 **Quoi :** Sondes `bench_whoami` (scénario, version, en-têtes, tools `name@version`, hashes, `note` optionnel pour tagger host/modèle), `bench_mutate` (Zod `BenchMutateInput` : create/update/enable/disable tool, set_instructions, bump_version sur le scénario actif ; `updated_at` posé par les updates ; `notifications/tools/list_changed` émise dans le flux de réponse de sa propre requête via `relatedRequestId`, seule voie stateless), `bench_readme` (contenu + ack HMAC-SHA256 fenêtré) ; six leviers readme appliqués par `applyLever` (fonction pure) ; gardes `ack` et `gate` avant dispatch ; contexte par requête avec outcomes (`list_changed_sent`, `is_error`, `error_text` fusionnés dans le journal) ; GET/DELETE journalisés `http:GET`/`http:DELETE` puis 405 sans charger le snapshot ; migration d'amorçage des sondes ; smoke étendu (whoami, mutate create puis disable, notification dans le flux).
 **Pourquoi :** Story E01-S03 : rendre le banc pilotable depuis la conversation et mesurer si un readme peut être imposé.
