@@ -14,7 +14,176 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bench_events: {
+        Row: {
+          args: Json | null
+          client_name: string | null
+          client_version: string | null
+          error_text: string | null
+          id: number
+          ip: string | null
+          is_error: boolean
+          list_changed_sent: boolean | null
+          method: string
+          protocol_version: string | null
+          response_chars: number | null
+          rpc_id: string | null
+          scenario_slug: string | null
+          server_version: string | null
+          session_id: string | null
+          tool_name: string | null
+          tools_served: number | null
+          ts: string
+          user_agent: string | null
+        }
+        Insert: {
+          args?: Json | null
+          client_name?: string | null
+          client_version?: string | null
+          error_text?: string | null
+          id?: never
+          ip?: string | null
+          is_error?: boolean
+          list_changed_sent?: boolean | null
+          method: string
+          protocol_version?: string | null
+          response_chars?: number | null
+          rpc_id?: string | null
+          scenario_slug?: string | null
+          server_version?: string | null
+          session_id?: string | null
+          tool_name?: string | null
+          tools_served?: number | null
+          ts?: string
+          user_agent?: string | null
+        }
+        Update: {
+          args?: Json | null
+          client_name?: string | null
+          client_version?: string | null
+          error_text?: string | null
+          id?: never
+          ip?: string | null
+          is_error?: boolean
+          list_changed_sent?: boolean | null
+          method?: string
+          protocol_version?: string | null
+          response_chars?: number | null
+          rpc_id?: string | null
+          scenario_slug?: string | null
+          server_version?: string | null
+          session_id?: string | null
+          tool_name?: string | null
+          tools_served?: number | null
+          ts?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      bench_scenarios: {
+        Row: {
+          ack_ttl_seconds: number | null
+          created_at: string
+          id: string
+          instructions: string
+          is_active: boolean
+          notes: string | null
+          readme_content: string | null
+          readme_lever: string
+          server_name: string
+          server_title: string | null
+          server_version: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          ack_ttl_seconds?: number | null
+          created_at?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          notes?: string | null
+          readme_content?: string | null
+          readme_lever?: string
+          server_name?: string
+          server_title?: string | null
+          server_version?: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          ack_ttl_seconds?: number | null
+          created_at?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          notes?: string | null
+          readme_content?: string | null
+          readme_lever?: string
+          server_name?: string
+          server_title?: string | null
+          server_version?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bench_tools: {
+        Row: {
+          annotations: Json | null
+          created_at: string
+          description: string
+          enabled: boolean
+          handler: string
+          id: string
+          input_schema: Json
+          name: string
+          scenario_id: string
+          sort_order: number
+          title: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          annotations?: Json | null
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          handler?: string
+          id?: string
+          input_schema?: Json
+          name: string
+          scenario_id: string
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          annotations?: Json | null
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          handler?: string
+          id?: string
+          input_schema?: Json
+          name?: string
+          scenario_id?: string
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bench_tools_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "bench_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

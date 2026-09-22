@@ -1,6 +1,6 @@
 # Component Registry
 
-> Derniere MAJ : 2026-09-22 (E01-S01)
+> Derniere MAJ : 2026-09-22 (E01-S02)
 > VERIFIER ce fichier AVANT de creer un composant/hook/util.
 
 ## UI Components (Shadcn/ui — installes)
@@ -80,9 +80,15 @@
 |------|------|-------|
 | cn | src/lib/utils/cn.ts | Merge Tailwind classes (clsx + tailwind-merge) |
 | getAdminClient | src/lib/supabase/admin.ts | Client Supabase clé secrète, `server-only`, mémoïsé, typé `Database` — SEUL accès aux tables du banc (ADR-002). Jamais depuis un Client Component |
+| byteLength, truncateToBytes | src/lib/utils/byte-size.ts | Taille UTF-8 d'un texte, troncature à N octets (plafonds d'arguments et de journal) |
 
 ## Types partages
 
 | Type | Path | Usage |
 |------|------|-------|
-| <!-- Ajouter ici les types métier du projet --> | | |
+| BenchScenarioRow, BenchToolRow, BenchEventInsert | src/mcp/bench/repository.ts | Alias des types générés `Database` — ne pas redéfinir |
+| BenchRepository (+ SupabaseBenchRepository, MemoryBenchRepository) | src/mcp/bench/repository.ts | Accès aux tables du banc ; client injecté ; impl mémoire pour les tests |
+| BenchSnapshot, loadSnapshot | src/mcp/bench/snapshot.ts | Scénario actif + tools activés, relu à chaque requête ; snapshot vide fabriqué à neuf (jamais partagé) |
+| parseRpcBody, logEvents | src/mcp/bench/events.ts | Journal JSON-RPC → `bench_events` (`BenchEventInsert`), plafonné à 100 événements par requête, jamais bloquant |
+| Handler, ToolHandler, toToolList, dispatchToolCall | src/mcp/bench/registry.ts | Point d'extension des sondes (S03) |
+| makeScenario, makeTool | tests/factories/bench.factory.ts | Fixtures scénario / tool de test |

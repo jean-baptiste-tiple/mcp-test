@@ -31,8 +31,11 @@ porte sa propre auth.
 
 ### Lancer le smoke test MCP
 
-`scripts/smoke-mcp.mjs` appelle `initialize`, `tools/list` et `tools/call get_status` contre un
-serveur **déjà démarré**, et gère les réponses SSE comme JSON.
+`scripts/smoke-mcp.mjs` appelle `initialize`, `tools/list` et `tools/call bench_echo` contre un
+serveur **déjà démarré**, et gère les réponses SSE comme JSON. Il suppose le scénario
+`baseline` actif en base (`serverInfo.name` = `mcp-bench`, `title` = `MCP Bench`, tool
+`bench_echo`) et échoue si aucun scénario ne l'est (`serverInfo.version` à `0.0.0`) : c'est
+toute la chaîne base → snapshot → tools qui est testée, pas seulement la route.
 
 ```bash
 pnpm build && pnpm start          # ou pnpm dev
@@ -166,9 +169,9 @@ Le cadrage (`/tm-plan`) remplit la section "Canal MCP" de l'architecture (tools,
 │   │   ├── (dashboard)/         # Layout principal + page /dashboard placeholder
 │   │   ├── design-system/       # Preview du design system
 │   │   └── api/[transport]/     # Endpoint MCP servi sur /api/mcp — mcp-handler (PAS api/mcp/ : 404 sinon)
-│   ├── mcp/                     # Serveur MCP : config, assemblage, tools, helpers
+│   ├── mcp/                     # config, assemblage, bench/ (registre, snapshot, journal, handlers)
 │   ├── components/              # ui/ (34 Shadcn) + composants métier
-│   └── lib/                     # services/, schemas/, utils/
+│   └── lib/                     # schemas/, supabase/, utils/
 └── tests/                       # Unit, integration, e2e (smoke fournis)
 ```
 

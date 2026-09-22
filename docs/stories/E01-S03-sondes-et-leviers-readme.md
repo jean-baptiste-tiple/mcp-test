@@ -45,11 +45,12 @@ S02 sert des tools echo depuis la base. Cette story ajoute les trois sondes qui 
 - `tests/unit/bench-levers.test.ts`, `tests/unit/bench-ack.test.ts`, `tests/unit/bench-handlers.test.ts`
 
 ### Fichiers à modifier
-- `src/mcp/bench/repository.ts` : `createTool`, `updateTool`, `setToolEnabled`, `setInstructions`, `bumpServerVersion`, `hasRecentReadmeCall(fingerprint, sinceTs)` ; implémentations Supabase et mémoire
-- `src/mcp/bench/registry.ts` : enregistrement des 3 handlers ; vérification ack ou gate avant dispatch pour les tools non-readme ; `applyLever` utilisé par `tools/list`
-- `src/mcp/server.ts` : instructions servies après `applyLever` ; `ctx` porte `server`, `headers`, `fingerprint`
-- `src/mcp/bench/events.ts` : champ `list_changed_sent`
-- `supabase/migrations/<timestamp>_probes.sql` : ajoute au scénario `baseline` les lignes `bench_whoami`, `bench_mutate`, `bench_readme` (handlers), descriptions « Use this when… / Do not use for… », annotations honnêtes (`readOnlyHint: true` sauf mutate, `destructiveHint: false`, `idempotentHint` sur whoami/readme), `readme_content` de base avec une consigne « quote the ack line back to the user »
+- `src/mcp/bench/repository.ts` : `createTool`, `updateTool`, `setToolEnabled`, `setInstructions`, `bumpServerVersion`, `hasRecentReadmeCall(fingerprint, sinceTs)` ; implémentations Supabase et mémoire. Chaque `update` pose `updated_at = now()` explicitement (aucun trigger en base : la colonne n'est maintenue que par le code)
+- `src/mcp/bench/registry.ts` : enregistrement des 3 handlers ; vérification ack ou gate avant dispatch pour les tools non-readme ; `applyLever` utilisé par `tools/list`. S02 a livré `installBenchHandlers(server, snapshot)` et `dispatchToolCall(snapshot, name, args)` sans `ctx` (surface morte à l'époque) : S03 introduit `ctx` ici, avec `server` (pour `sendToolListChanged`), `headers` et `fingerprint` (user_agent, ip)
+- `src/mcp/server.ts` : instructions servies après `applyLever`
+- `src/app/api/[transport]/route.ts` : GET et DELETE journalisés comme `method = 'http:GET'` / `'http:DELETE'` (sans body, avec en-têtes et empreinte) puis 405 direct sans charger le snapshot : « ce host a tenté d'ouvrir le flux SSE » est une mesure du banc (E02)
+- `src/mcp/bench/events.ts` : champ `list_changed_sent` ; support des événements sans body JSON-RPC
+- `supabase/migrations/<timestamp>_probes.sql` : ajoute au scénario `baseline` les lignes `bench_whoami`, `bench_mutate`, `bench_readme` (handlers), descriptions « Use this when… / Do not use for… », annotations honnêtes (`readOnlyHint: true` sauf mutate, `destructiveHint: false`, `idempotentHint` sur whoami/readme), `readme_content` de base avec une consigne « quote the ack line back to the user ». **Cette migration est la source unique des 4 sondes** : le seed de S04 les clone depuis `baseline` vers les autres scénarios, il ne les redéfinit pas
 - `.env.example` : `BENCH_ACK_SECRET`
 - `scripts/smoke-mcp.mjs` : appelle `bench_whoami` après `tools/list`
 
