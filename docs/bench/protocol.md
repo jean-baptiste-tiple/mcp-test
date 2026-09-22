@@ -57,7 +57,7 @@ Six mutations. Pour chacune, même conversation que P0 sauf indication, puis mon
 
 - **P1** (exemple M1) : « Call bench_mutate with action "create_tool", name "bench_probe_1", description "Probe tool [C:manual:desc:end:0001]. Use this when asked to probe." Then stop. »
 - **P2** : « List the exact names of every tool you currently have from the bench server. Do not call any tool. »
-- **P3** : « Quote verbatim the description of tool bench_probe_1 as you see it. Do not call any tool. »
+- **P3** : « Quote verbatim the description of tool bench_probe_1 as you see it. Do not call any bench tool. » Sur Claude Code, ajouter : « You may load the tool definition with ToolSearch first. » (les tools MCP y sont différés : sans chargement, le modèle ne voit que le nom ; le chargement n'est pas un appel MCP, le serveur n'en voit rien).
 - **P4** : « Call bench_echo with message "hello". » → lire les `args` dans **Q2** (le host envoie-t-il `mode` ? refuse-t-il sans `message` ?).
 - **P5** : « Call bench_probe_1. » → le host refuse (tool inconnu côté host) ou appelle et reçoit l'erreur serveur « Unknown tool ».
 - **P6** : « Quote verbatim the instructions of the bench server, including any bracketed codes. Do not call any tool. »
@@ -86,7 +86,7 @@ Pour chaque scénario de limite : activer dans Studio, puis **L4** (supprimer et
 
 | Scénarios | Prompt | Ce qu'on lit |
 |-----------|--------|--------------|
-| `desc_len_500`, `_2k`, `_8k`, `_32k` | **P8** : « For each tool of the bench server, quote every bracketed code of the form [C:...] that appears in its description, in order. Do not call any tool. » | Canari `end` absent = troncature entre `middle` et `end` ; `middle` absent = troncature plus tôt ; aucun = description non exposée |
+| `desc_len_500`, `_2k`, `_8k`, `_32k` | **P8** : « For each tool of the bench server, quote every bracketed code of the form [C:...] that appears in its description, in order. Do not call any bench tool. » Sur Claude Code, ajouter « You may load the tool definitions with ToolSearch first. » | Canari `end` absent = troncature entre `middle` et `end` ; `middle` absent = troncature plus tôt ; aucun = description non exposée. Sur Claude Code, distinguer « non chargé » (nom seul) de « tronqué » |
 | `instr_len_0`, `_500`, `_5k`, `_20k`, `_50k` | **P6** | Idem sur les instructions ; `instr_len_0` mesure si le host dit quelque chose sans instructions |
 | `name_len_32`, `_64`, `_128`, `name_chars` | **P9** : « List the exact tool names of the bench server, then call the one whose name is the longest with message "x". » | Nom tronqué, renommé, refusé ; appel réussi ou non (Q2 : `tool_name` reçu) |
 | `many_tools_20`, `_50`, `_100`, `_200`, `_500` | **P10** : « How many tools does the bench server expose? Give the first five and the last five names. Are any of them deferred or hidden from you? » | Nombre rapporté vs `tools_served` (**Q4**) ; CC : mention de ToolSearch / outils différés ; refus du host au chargement |

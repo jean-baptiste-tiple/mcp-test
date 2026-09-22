@@ -8,12 +8,12 @@ Une ligne par couple host × modèle (tag `note` de P0). Les grilles A, B, C son
 
 | Host | Modèle (tag) | client_name@client_version | user_agent | Date |
 |------|--------------|----------------------------|------------|------|
-| Claude Code (CC) | claude-code/sonnet | claude-code@2.1.263 | claude-code/2.1.263 (claude-vscode, agent-sdk/0.3.278) | 2026-09-22 |
-| Claude Code (CC) | claude-code/opus | claude-code@2.1.263 | idem | |
-| Claude Code (CC) | claude-code/fable | claude-code@2.1.263 | idem | |
+| Claude Code (CC) | claude-code/sonnet | claude-code@2.1.278 | claude-code/2.1.278 (claude-vscode, agent-sdk/0.3.278), IP du poste | |
+| Claude Code (CC) | claude-code/opus | claude-code@2.1.278 | idem | |
+| Claude Code (CC) | claude-code/fable | claude-code@2.1.278 | idem (P0 du 2026-09-22 11:00 tagué « claude-code/opus-5 » par erreur : session Fable 5) | 2026-09-22 |
 | Claude Desktop / Cowork (CD) | claude-desktop/… | | | |
-| claude.ai web (CW) | claude-web/… | Anthropic/ClaudeAI@1.0.0 (chat) et Anthropic/Toolbox@1.0.0 (connecteurs) ; validateur d'URL : Anthropic@1.0.0 | Claude-User (chat, connecteurs) ; python-httpx/0.28.1 (validateur) ; IP 160.79.106.x, une IP différente par requête ; protocole 2025-11-25 | 2026-09-22 |
-| ChatGPT developer mode (GPT) | chatgpt/… | | | |
+| claude.ai web (CW) | claude.ai/opus-5 | Runtime du chat : **claude-code@2.1.278** (ids courts) ; second client `Anthropic/ClaudeAI@1.0.0` (ids longs) ; à l'ajout du connecteur : `Anthropic/Toolbox@1.0.0` ; « Actualiser la liste des outils » : `claude-ai@0.1.0` ; validateur d'URL : `Anthropic@1.0.0` | Claude-User (chat, connecteurs) ; python-httpx/0.28.1 (validateur) ; IP 160.79.106.x, une IP différente par requête ; protocole 2025-11-25 | 2026-09-22 |
+| ChatGPT developer mode (GPT) | chatgpt/gpt-5.6-luna | openai-mcp@1.0.0 | openai-mcp/1.0.0 ; IP 74.161.200.x, une IP différente par requête ; protocole 2025-11-25 à l'`initialize`, **aucun en-tête `Mcp-Protocol-Version` sur `tools/call`** | 2026-09-22 |
 | MCP Inspector (INS) | inspector/none | | | |
 
 ## Grille A — Moments de lecture
@@ -32,12 +32,14 @@ Friction CW 2026-09-22 : avec le mode « Se connecter maintenant » (option en t
 
 | Geste | CC | CD | CW | GPT |
 |-------|----|----|----|-----|
-| Ajout du connecteur / démarrage | | | | |
-| Nouvelle conversation (sans message) | | | | |
+| Ajout du connecteur / démarrage | init + list (+ GET 405), rejoué à chaque `claude mcp list` · 2026-09-22 | | init + list, deux fois (Toolbox puis ClaudeAI) · 2026-09-22 | discover + init ×2 + list · 2026-09-22 |
+| Nouvelle conversation (sans message) | | | rien ; et au premier appel de tool de la nouvelle conversation : `tools/call` seul, sans initialize ni list (11:21:41) · la liste exposée au modèle est celle cachée à la création du connecteur (10:53) · 2026-09-22 | |
 | Message sans rapport (« Bonjour ») | | | | |
-| Message qui appelle un tool | | | | |
-| Second appel de tool | | | | |
-| Reconnect | | | | |
+| Message qui appelle un tool | discover + init + initialized + GET + **list** + call (par session) · 2026-09-22 | | discover + init + initialized + **list** + call, **à chaque tour** (runtime claude-code@2.1.278) ; un second client (ids longs) rappelle le tool sans `initialize` · 2026-09-22 | init + call, **pas de tools/list** (liste cachée depuis l'ajout du connecteur, 3 min plus tôt) · 2026-09-22 |
+| Second appel de tool | | | `server/discover` + `tools/call` seuls (client ids longs), **sans initialize ni list** dans une conversation déjà ouverte · 2026-09-22 | `tools/call` seul, sans initialize ni list · 2026-09-22 |
+| Reconnect | | | désactiver/réactiver : à mesurer ; **« Actualiser la liste des outils »** (réglages du connecteur) : `server/discover` + init (`claude-ai@0.1.0`) + initialized + list · 11:30:56 · 2026-09-22 | désactiver/réactiver : **aucune requête** ; **« Déconnecter / Reconnecter »** : `server/discover` + init ×2 + initialized + list (même séquence qu'à la création) · 11:33:41 · 2026-09-22 |
+
+Lecture P0 (2026-09-22, révisée après M1) : les deux handshakes complets de claude.ai avec le runtime `claude-code@2.1.278` (10:57, 10:59) n'ont pas été reproduits ensuite : à 11:14, 11:19 et 11:21 (dont une nouvelle conversation), claude.ai n'envoie que `server/discover` + `tools/call` ou `tools/call` seul, et expose au modèle la liste cachée à la création du connecteur. ChatGPT ne relit pas non plus (initialize + call, ou call seul). Claude Code lit la liste à l'ouverture de session et la relit sur notification. Mesuré en M1 : Claude Code L0, claude.ai et ChatGPT au-delà de L2.
 
 ## Grille B — Propagation d'une mutation
 
@@ -45,7 +47,7 @@ Case = niveau minimal (L0 à L5) · `fetch:` oui/non (Q3) · date · client.
 
 | Mutation | CC | CD | CW | GPT |
 |----------|----|----|----|-----|
-| M1 Tool créé | | | | |
+| M1 Tool créé | **L0** (notification) · fetch: oui (0,5 s) · P2 : le modèle liste `mcp__bench__bench_probe_1` dans le même tour, **nom seul** ; P3 avec chargement ToolSearch : description servie citée mot pour mot, canari `[C:manual:desc:end:0001]` intact, schéma `{"properties":{},"type":"object"}` ; le chargement n'a produit **aucune requête serveur** (liste cachée depuis le `tools/list` de 11:11:51) · 2026-09-22 · claude-code@2.1.278 · opus | | L0 : **non** (P2 : 4 tools `mcp__test__*`, ni probe_1 ni probe_2 ; `bench_readme` « listé mais non chargé » = différé aussi) · L1 : **non** (11:19:41, appel réel `bench_whoami` seul, sans `tools/list` ; le modèle voit 7 tools côté serveur et 4 côté host, et le dit) · L2 : **non** (11:21:41, nouvelle conversation = `tools/call` seul, **ni initialize ni tools/list** ; la liste exposée date de la création du connecteur, 10:53) · **L3-bis : oui** — « Actualiser la liste des outils » dans les réglages du connecteur (11:30:56 : `server/discover` → `initialize` avec clientInfo **`claude-ai@0.1.0`** → `initialized` → `tools/list` à 7) ; P2 ensuite : les 7 tools `mcp__test__*`, « all deferred, not loaded » · niveau minimal = **L3-bis** (geste dans les réglages, pas de reconnexion) · 2026-09-22 · opus-5 | L0 : **non fetché** (aucun `tools/list` depuis la mutation) mais **rapporté** : P2 liste `bench_probe_3` de mémoire de conversation, sans probe_1 ni probe_2 ; P5 confirme : « not currently exposed as an available tool in this session » · L2 : **non fetché** (11:26:02, nouvelle conversation avec le connecteur activé = `tools/call bench_whoami` seul, sans `tools/list`) mais P2 **recopie les 7 tools de la sortie de whoami** dans le même ordre : à ne jamais prendre pour une liste du host ; P5 dans cette conversation : `bench_probe_1` « pas exposé » · désactiver/réactiver : **non** (**aucune requête** au serveur, nouvelle conversation avec `@test` → les 4 anciens tools, nommés `tools.mcp__test__*`) · **L3 « Déconnecter / Reconnecter » : oui** (11:33:41 et 11:34:19 : `server/discover` → `initialize` ×2 → `initialized` → `tools/list` à **7**) ; mais P2 ensuite ne cite que 4 des 7 (whoami, probe_1, probe_2, mutate : ni echo, ni readme, ni probe_3) → **fetché 7, rapporté 4** ; appel réel de `bench_probe_3` réussi (`{"message":"hello"}`) : le host a les 7, le modèle liste mal · niveau minimal = **L3 « Déconnecter / Reconnecter »** · le connecteur ne peut pas être supprimé (L4 impossible) · 2026-09-22 · gpt-5.6-luna |
 | M2 Description modifiée | | | | |
 | M3 Schéma modifié | | | | |
 | M4 Tool désactivé | | | | |
@@ -56,14 +58,16 @@ Notification `list_changed` écrite dans le flux de réponse de `bench_mutate` (
 
 | Host | tools/list spontané après bench_mutate | Délai | Date · client |
 |------|----------------------------------------|-------|---------------|
-| CC | | | |
+| CC | **oui** : `tools/list` id 4 juste après le `tools/call bench_mutate` id 3, réponse à 5 tools, aucun geste humain | 0,5 s | 2026-09-22 11:11:51 · claude-code@2.1.278 · opus |
 | CD | | | |
-| CW | | | |
-| GPT | | | |
+| CW | **non** : aucun `tools/list` après le `tools/call bench_mutate` (id 422314386, `bench_probe_2` créé) | — | 2026-09-22 11:14:28 · client ids longs (Anthropic/ClaudeAI) · opus-5 |
+| GPT | **non** : aucun `tools/list` après le `tools/call bench_mutate` (id 0, `bench_probe_3` créé) | — | 2026-09-22 11:14:39 · openai-mcp@1.0.0 · gpt-5.6-luna |
 
 Notes (divergences « fetché mais ignoré », comportements inattendus) :
 
--
+- GPT 2026-09-22 : « rapporté mais pas fetché » : après avoir créé `bench_probe_3` lui-même, le modèle le liste comme disponible sans que le host ait relu `tools/list` (les tools créés par les autres hosts n'y figurent pas). Inversement, après la reconnexion (7 tools fetchés), le modèle n'en liste que 4 alors que les 7 sont appelables. Sur ChatGPT, un P2 seul n'est jamais fiable dans les deux sens : vérifier par un appel réel (P5) ou par le journal (Q3).
+- CW 2026-09-22 : préfixe `mcp__test__` = nom du connecteur saisi par l'utilisateur (« test mcp »), pas `serverInfo.name` ; `bench_readme` « listé mais non chargé » : le runtime claude.ai (claude-code@2.1.278) diffère aussi les définitions de tools.
+- CC 2026-09-22 : les tools MCP sont exposés au modèle sous `mcp__<nom local du serveur>__<tool>` (ici `bench` = nom passé à `claude mcp add`, pas `serverInfo.name`). Un tool ajouté par notification arrive **nom seul** : le modèle dit ne pas avoir chargé son schéma ni sa description tant qu'il ne le charge pas via ToolSearch. P3 confirmé (11:20) : sans chargement, « no description has reached me from the host » ; le modèle ne connaît que le texte qu'il a lui-même envoyé dans `bench_mutate`. Conséquence pour la grille C : sur Claude Code, une description n'est lue qu'au chargement du tool (ToolSearch, invisible pour le serveur), pas à `tools/list` ; les prompts P3/P8 doivent autoriser ce chargement.
 
 ## Grille C — Limites
 
