@@ -1,0 +1,314 @@
+@import "tailwindcss";
+
+/* Dark mode piloté par la classe `.dark` (next-themes), pas par prefers-color-scheme.
+   Requis en Tailwind v4 pour que les utilitaires `dark:` suivent le toggle de thème. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Plugin animate (animate-in/out des overlays shadcn : dialog, sheet, popover, tooltip…).
+   Tailwind v4 ne lit AUCUN tailwind.config.* : plugins et keyframes vivent ici. */
+@plugin "tailwindcss-animate";
+
+/* ──────────────────────────────────────────────
+   Design System — Tiple : Vert Mint (#06f5a2) sur neutres chauds
+   Aligné sur le design system tiple.io (repo website-tiple).
+   ────────────────────────────────────────────── */
+
+@theme inline {
+  --font-sans: var(--font-instrument), "Instrument Sans", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-dark: var(--primary-dark);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: calc(var(--radius) - 1px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+/* ── Light Theme (défaut) — neutres CHAUDS (teinte 80), vert mint en accent ── */
+:root {
+  --background: #fafafa;
+  --foreground: oklch(0.15 0.005 80);
+
+  /* Vert mint Tiple #06f5a2 — fills, bordures, états actifs (texte dark dessus). */
+  --primary: oklch(0.87 0.19 162);
+  --primary-foreground: oklch(0.15 0.005 80);
+  /* Vert profond lisible pour du TEXTE-accent sur fond clair (le mint échoue AA). */
+  --primary-dark: #00b47c;
+
+  --secondary: oklch(0.968 0.003 80);
+  --secondary-foreground: oklch(0.15 0.005 80);
+
+  --muted: oklch(0.968 0.003 80);
+  --muted-foreground: oklch(0.45 0.01 80);
+
+  --accent: oklch(0.93 0.005 80);
+  --accent-foreground: oklch(0.15 0.005 80);
+
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.99 0.002 80);
+
+  --success: oklch(0.62 0.15 158);
+  --success-foreground: oklch(0.15 0.005 80);
+
+  --warning: oklch(0.72 0.16 75);
+  --warning-foreground: oklch(0.2 0.02 75);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.005 80);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.005 80);
+
+  --border: oklch(0.9 0.004 80);
+  --input: oklch(0.9 0.004 80);
+  --ring: oklch(0.87 0.19 162);
+
+  --radius: 0.25rem;
+
+  /* Sidebar SOMBRE même en thème clair (signature éditoriale tiple.io : panneau
+     quasi-noir chaud + mint) — casse le « tout blanc » de l'app. */
+  --sidebar: oklch(0.17 0.004 80);
+  --sidebar-foreground: oklch(0.93 0.004 80);
+  --sidebar-accent: oklch(0.24 0.006 80);
+  --sidebar-accent-foreground: oklch(0.97 0.003 80);
+  --sidebar-border: oklch(0.26 0.006 80);
+  --sidebar-ring: oklch(0.87 0.19 162);
+
+  /* Charts : mint en tête puis neutres chauds (lecture « data », pas arc-en-ciel). */
+  --chart-1: oklch(0.87 0.19 162);
+  --chart-2: oklch(0.55 0.13 160);
+  --chart-3: oklch(0.45 0.02 80);
+  --chart-4: oklch(0.62 0.015 80);
+  --chart-5: oklch(0.78 0.008 80);
+}
+
+/* ── Dark Theme (soigné) — quasi-noirs #0F0F0F / #202020, mint qui ressort ── */
+.dark {
+  --background: oklch(0.145 0.002 80);
+  --foreground: oklch(0.96 0.003 80);
+
+  --primary: oklch(0.87 0.19 162);
+  --primary-foreground: oklch(0.15 0.005 80);
+  --primary-dark: #06f5a2;
+
+  --secondary: oklch(0.255 0.004 80);
+  --secondary-foreground: oklch(0.96 0.003 80);
+
+  --muted: oklch(0.235 0.003 80);
+  --muted-foreground: oklch(0.68 0.008 80);
+
+  --accent: oklch(0.28 0.005 80);
+  --accent-foreground: oklch(0.96 0.003 80);
+
+  --destructive: oklch(0.62 0.22 27.325);
+  --destructive-foreground: oklch(0.98 0.005 27);
+
+  --success: oklch(0.72 0.17 160);
+  --success-foreground: oklch(0.15 0.005 80);
+
+  --warning: oklch(0.78 0.15 75);
+  --warning-foreground: oklch(0.18 0.02 75);
+
+  --card: oklch(0.205 0.003 80);
+  --card-foreground: oklch(0.96 0.003 80);
+
+  --popover: oklch(0.205 0.003 80);
+  --popover-foreground: oklch(0.96 0.003 80);
+
+  --border: oklch(0.275 0.004 80);
+  --input: oklch(0.275 0.004 80);
+  --ring: oklch(0.87 0.19 162);
+
+  --sidebar: oklch(0.175 0.003 80);
+  --sidebar-foreground: oklch(0.9 0.004 80);
+  --sidebar-accent: oklch(0.28 0.005 80);
+  --sidebar-accent-foreground: oklch(0.96 0.003 80);
+  --sidebar-border: oklch(0.275 0.004 80);
+  --sidebar-ring: oklch(0.87 0.19 162);
+
+  --chart-1: oklch(0.87 0.19 162);
+  --chart-2: oklch(0.6 0.14 160);
+  --chart-3: oklch(0.72 0.01 80);
+  --chart-4: oklch(0.55 0.01 80);
+  --chart-5: oklch(0.4 0.008 80);
+}
+
+/* ── Base ── */
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Cursor pointer on interactive elements ── */
+button,
+[role="button"],
+[role="tab"],
+[role="checkbox"],
+[role="radio"],
+[role="switch"],
+[role="menuitem"],
+[role="menuitemcheckbox"],
+[role="menuitemradio"],
+[role="option"],
+[role="combobox"],
+select,
+summary,
+a[href],
+label[for] {
+  cursor: pointer;
+}
+
+@layer utilities {
+  .ring-ring {
+    --tw-ring-color: var(--ring);
+  }
+
+  /* Police mono (labels, chiffres, méta) — signe l'identité Tiple. */
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  /* Micro-interaction éditoriale : la carte se soulève au survol. */
+  .hover-lift {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.35s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-3px);
+  }
+
+  /* Titre « outline » (contour, remplissage transparent) — accent brutaliste léger. */
+  .text-stroke {
+    -webkit-text-stroke: 1.25px currentColor;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Fond des corps de page : halo mint modéré en HAUT-DROITE + écho discret en
+     bas-gauche, sur le fond neutre. Donne de la profondeur sans jamais gêner la
+     lecture (coupler avec .noise-overlay). */
+  .page-canvas {
+    position: relative;
+    /* Contexte d'empilement local : permet au ::before (croix) de passer SOUS le
+       contenu (z-index -1) tout en restant au-dessus du fond de la page. */
+    isolation: isolate;
+    background-color: var(--background);
+    background-image: radial-gradient(
+        1100px 520px at 88% -12%,
+        color-mix(in oklab, var(--primary) 9%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        900px 420px at -8% 112%,
+        color-mix(in oklab, var(--primary) 4%, transparent),
+        transparent 60%
+      );
+  }
+  .dark .page-canvas {
+    background-image: radial-gradient(
+        1100px 520px at 88% -12%,
+        color-mix(in oklab, var(--primary) 6%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        900px 420px at -8% 112%,
+        color-mix(in oklab, var(--primary) 3%, transparent),
+        transparent 60%
+      );
+  }
+
+  /* Semis de petites croix (repères d'ingénierie) ancré en haut-gauche : discret
+     dès le départ (opacité faible) mais qui porte LOIN — l'estompe du masque est
+     douce et ne s'éteint qu'aux abords du bas de page. */
+  .page-canvas::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    /* SOUS le contenu : les surfaces opaques (cards, tableaux `bg-card`) masquent
+       les croix — elles ne restent visibles que sur le fond nu de la page. */
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 7.5v5M7.5 10h5' stroke='%23787870' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-size: 20px 20px;
+    opacity: 0.14;
+    -webkit-mask-image: radial-gradient(1500px 950px at 0% 0%, black, transparent 90%);
+    mask-image: radial-gradient(1500px 950px at 0% 0%, black, transparent 90%);
+  }
+  .dark .page-canvas::before {
+    opacity: 0.1;
+  }
+
+  /* Grain fin superposé (texture, pas de dépendance externe : SVG inline). */
+  .noise-overlay {
+    position: relative;
+  }
+  .noise-overlay::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 1;
+  }
+}
