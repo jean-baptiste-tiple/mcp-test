@@ -1,5 +1,6 @@
 # Protocole du banc MCP
 
+> Runbook concret de la campagne en cours (clics, prompts, ordre, budget) : `docs/bench/campagne.md`.
 > Ce document se suit à la main, host par host. Chaque étape donne le prompt exact, ce qu'on attend, et où lire l'observation (dans le host, ou en SQL dans `bench_events`). Les résultats vont dans `docs/bench/results.md`, toujours avec la date et le `client_name@client_version` loggé.
 > Hosts : Claude Code (CC), Claude Desktop / Cowork (CD), claude.ai web (CW), ChatGPT developer mode (GPT). MCP Inspector (INS) sert de référence : il montre exactement ce que le serveur sert.
 
