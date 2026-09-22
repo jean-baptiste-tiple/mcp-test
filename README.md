@@ -11,6 +11,53 @@ C'est le Tiple Method Template de base (structure, templates de docs, checklists
 
 Stack : Next.js 15 (App Router) + TypeScript strict + Tailwind CSS + Shadcn/ui. Backend Supabase via starter (DB + RLS + Auth + Storage — c'est aussi l'authorization server OAuth 2.1 du canal MCP). Canal MCP : `@modelcontextprotocol/sdk` + `mcp-handler` (endpoint `/api/mcp`), widgets buildés par Vite en HTML single-file. IA optionnelle : Claude API (`@anthropic-ai/sdk`).
 
+## MCP Bench
+
+Ce dépôt n'est pas un produit : c'est un **banc de mesure** du comportement des hosts MCP
+(Claude, ChatGPT, MCP Inspector) — quand relisent-ils `tools/list`, honorent-ils
+`notifications/tools/list_changed`, que font-ils d'une description de 8 ko, d'un catalogue de
+500 tools, d'un levier « lis le readme d'abord ». Les tools du banc sont des **lignes en base**,
+pas du code : les modifier ne demande aucun déploiement.
+
+**⚠️ Le code du banc n'est pas un exemple de produit MCP.** Il déroge volontairement aux règles
+MCP du `CLAUDE.md` : endpoint `/api/mcp` **public** (pas d'OAuth en phase 1), clé secrète
+Supabase côté serveur, pas de widgets, pas de chaîne `Zod → service → tool` pour les tools
+générés, pas de plafond de 10 tools. Chaque dérogation et sa contrepartie :
+`docs/decisions/ADR-002-derogations-banc.md`. Transport stateless figé par
+`docs/decisions/ADR-001-transport-stateless.md`.
+
+Aucun middleware : toute route `/api/*` est publique par construction ; chaque handler ajouté
+porte sa propre auth.
+
+### Lancer le smoke test MCP
+
+`scripts/smoke-mcp.mjs` appelle `initialize`, `tools/list` et `tools/call get_status` contre un
+serveur **déjà démarré**, et gère les réponses SSE comme JSON.
+
+```bash
+pnpm build && pnpm start          # ou pnpm dev
+pnpm mcp:smoke                    # défaut : http://localhost:3000/api/mcp
+pnpm mcp:smoke https://mcp-test-navy.vercel.app/api/mcp   # après déploiement
+```
+
+Exploration manuelle : `pnpm mcp:inspect` puis connecter `http://localhost:3000/api/mcp`.
+
+### Brancher la CLI Supabase (une fois par machine)
+
+`pnpm db:push` et `pnpm db:types` parlent au projet cloud `nwdmkehnxvqyxddgogtu` via les
+identifiants stockés par la CLI — ils ne lisent pas `.env.local`. Deux commandes à jouer une
+seule fois, avec le `SUPABASE_ACCESS_TOKEN` de `.env.local` et le mot de passe Postgres
+(dashboard Supabase → Settings → Database) :
+
+```bash
+pnpm exec supabase login --token <SUPABASE_ACCESS_TOKEN>
+pnpm exec supabase link --project-ref nwdmkehnxvqyxddgogtu --password <mot de passe Postgres>
+```
+
+Ensuite : `pnpm db:migrate <nom>` (nouvelle migration SQL), `pnpm db:push` (applique au projet
+cloud), `pnpm db:types` (régénère `src/types/database.ts`). Le lien est stocké dans
+`supabase/.temp/` (gitignoré).
+
 ## Le canal MCP en bref
 
 Les invariants que le template impose (détail dans `.claude/conventions/mcp-patterns.md`) :
@@ -118,15 +165,14 @@ Le cadrage (`/tm-plan`) remplit la section "Canal MCP" de l'architecture (tools,
 │   ├── app/
 │   │   ├── (dashboard)/         # Layout principal + page /dashboard placeholder
 │   │   ├── design-system/       # Preview du design system
-│   │   └── api/mcp/             # (starter mcp, installé en S01) Endpoint MCP — mcp-handler
-│   ├── mcp/                     # (starter mcp, installé en S01) Serveur MCP : tools, auth, helpers
+│   │   └── api/[transport]/     # Endpoint MCP servi sur /api/mcp — mcp-handler (PAS api/mcp/ : 404 sinon)
+│   ├── mcp/                     # Serveur MCP : config, assemblage, tools, helpers
 │   ├── components/              # ui/ (34 Shadcn) + composants métier
 │   └── lib/                     # services/, schemas/, utils/
-├── widgets/                     # (starter mcp, installé en S01) Sources MCP Apps — Vite single-file + bridge partagé
 └── tests/                       # Unit, integration, e2e (smoke fournis)
 ```
 
-Les dossiers marqués "starter mcp" ne sont pas pré-générés : le squelette complet vit dans `.claude/starters/mcp/` et s'installe lors de la story de setup (mapping fichier par fichier dans son README), guidé par `.claude/conventions/mcp-patterns.md`.
+Pas de dossier `widgets/` : les widgets MCP Apps du starter ne sont pas installés dans ce projet (ADR-002). Le squelette complet reste dans `.claude/starters/mcp/`, guidé par `.claude/conventions/mcp-patterns.md`.
 
 ## Personnaliser le template
 

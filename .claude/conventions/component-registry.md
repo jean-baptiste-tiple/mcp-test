@@ -1,6 +1,6 @@
 # Component Registry
 
-> Derniere MAJ : 2026-04-06
+> Derniere MAJ : 2026-09-22 (E01-S01)
 > VERIFIER ce fichier AVANT de creer un composant/hook/util.
 
 ## UI Components (Shadcn/ui — installes)
@@ -79,6 +79,7 @@
 | Util | Path | Usage |
 |------|------|-------|
 | cn | src/lib/utils/cn.ts | Merge Tailwind classes (clsx + tailwind-merge) |
+| getAdminClient | src/lib/supabase/admin.ts | Client Supabase clé secrète, `server-only`, mémoïsé, typé `Database` — SEUL accès aux tables du banc (ADR-002). Jamais depuis un Client Component |
 
 ## Types partages
 

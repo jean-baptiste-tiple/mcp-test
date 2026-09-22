@@ -1,0 +1,4 @@
+# Supabase configuration — projet cloud uniquement (aucune stack locale).
+# Docs: https://supabase.com/docs/guides/cli/config
+
+project_id = "nwdmkehnxvqyxddgogtu"

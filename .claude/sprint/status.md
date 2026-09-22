@@ -1,18 +1,23 @@
 # Sprint Status
 
-<!-- Géré par /tm-sprint et /tm-status -->
+<!-- Géré par /tm-plan (init) puis /tm-dev -->
 
 ## Sprint actuel
 
-> Pas de sprint actif. Lancer `/tm-sprint` pour initialiser.
-
 ### Informations
-- **Début :** —
+- **Début :** 2026-09-22
 - **Fin prévue :** —
-- **Epic focus :** —
+- **Epic focus :** E01 — Banc MCP stateless
 
 ### Stories
 
 | ID | Titre | Statut | Assigné |
 |----|-------|--------|---------|
-<!-- Rempli par /tm-sprint -->
+| E01-S01 | Setup technique : starter MCP sans widgets, Supabase, migrations | ✅ Done (2026-09-22) | Opus (agent) |
+| E01-S02 | Registre de tools en base et journal des requêtes | 🟢 Ready | Opus (agent) |
+| E01-S03 | Sondes whoami, mutate, readme et leviers readme | 🟢 Ready (après S02) | Opus (agent) |
+| E01-S04 | Catalogue de scénarios, seed, protocole, golden queries | 🟢 Ready (après S02) | Opus (agent) + Fable (docs) |
+| E01-S05 | Restitution dans mcp-patterns.md, CLAUDE.md et le template | ⬜ Draft | Fable |
+
+### Hors sprint
+- E02-S01 Transport stateful (Draft), E03-S01 OAuth (Draft)

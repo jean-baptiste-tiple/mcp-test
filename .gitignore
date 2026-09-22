@@ -14,6 +14,7 @@ build/
 
 # Supabase local runtime
 .supabase/
+supabase/.temp/
 
 # Testing
 test-results/
@@ -30,6 +31,7 @@ npm-debug.log*
 
 # IDE
 .idea/
+.vscode/
 *.swp
 *.swo
 
