@@ -14,14 +14,15 @@
    - GPT : Paramètres → Connecteurs → Mode développeur → Créer → URL, sans auth. Activer dans la conversation.
    - INS : `pnpm mcp:inspect`, transport Streamable HTTP, même URL.
 5. Noter l'heure exacte de chaque geste humain (ajout du connecteur, ouverture d'une conversation, envoi d'un message, reconnect). C'est la référence pour lire le journal.
+6. **Noter le modèle** sélectionné dans le host (Claude : Sonnet, Opus, Fable ; ChatGPT : modèle du sélecteur). Le serveur ne voit que le host, jamais le modèle : chaque session est taguée par le `note` de P0 (section 1). Ce qui dépend du host se mesure une fois par host (grilles A, B, C : moments de lecture, propagation, troncature par le host) et se contrôle sur un second modèle ; ce qui dépend du modèle se mesure par modèle (grille D leviers readme, citation des canaris, golden queries, rapport de frictions).
 
-## 1. Empreinte du host
+## 1. Empreinte du host et tag de session
 
-Prompt **P0** dans une nouvelle conversation :
+Prompt **P0** dans chaque nouvelle conversation de test (remplacer host et modèle) :
 
-> Call bench_whoami and paste its full output verbatim.
+> Call bench_whoami with note "claude-code/opus" and paste its full output verbatim.
 
-Attendu : le texte du tool (scénario, version, user-agent, protocole, liste `name@version`). Lire ensuite **Q1** : relever `client_name`, `client_version`, `user_agent`, `ip`. Reporter dans l'en-tête de `results.md`. Cette empreinte filtre toutes les requêtes suivantes.
+Attendu : le texte du tool (scénario, version, user-agent, protocole, liste `name@version`, `note`). Lire ensuite **Q1** : relever `client_name`, `client_version`, `user_agent`, `ip`. Reporter dans l'en-tête de `results.md` avec le modèle. Cette empreinte filtre toutes les requêtes suivantes ; **Q8** liste les tags de session et leur heure, ce qui borne chaque conversation dans le journal.
 
 ## 2. Moments de lecture (grille A)
 
@@ -75,7 +76,9 @@ Six mutations. Pour chacune, même conversation que P0 sauf indication, puis mon
 
 À chaque niveau, deux lectures : ce que le host **rapporte** (prompt) et ce que le serveur **a servi** (**Q3** : un `tools/list` après l'heure de la mutation ?). Les deux peuvent diverger : « fetché mais ignoré » est un résultat en soi. Case de la grille B = niveau minimal, plus `fetch: oui/non`, date, client.
 
-Remettre `baseline` d'aplomb après chaque host : `pnpm bench:seed` restaure les tools des scénarios (le tool `bench_probe_1` créé à la main est supprimé car absent du catalogue).
+Notification dans le flux : chaque appel `bench_mutate` écrit `notifications/tools/list_changed` dans le flux de réponse de son propre `tools/call` (seule voie stateless, ADR-001), et l'événement porte `list_changed_sent = true`. Regarder d'abord **Q3** juste après P1 : un `tools/list` dans les secondes qui suivent, sans geste humain, signifie que le host honore la notification (niveau L0 par notification). Son absence est la mesure attendue pour la plupart des hosts et prépare E02.
+
+Remettre `baseline` d'aplomb après chaque host : `pnpm bench:seed` restaure `baseline` et tous les scénarios depuis `scripts/lib/probes.mjs` et le catalogue (sondes, descriptions, schémas, instructions, readme, `server_version`) et supprime `bench_probe_1` ; il ne touche jamais `is_active`. Le journal `bench_events` n'est pas modifié.
 
 ## 4. Limites de taille et de nombre (grille C)
 
@@ -94,9 +97,9 @@ Coût : **Q4** donne `response_chars` par scénario ; tokens ≈ chars / 4. Note
 
 ## 5. Leviers readme (grille D)
 
-Pour chaque scénario `readme_instructions`, `readme_descriptions`, `readme_name_first`, `readme_gate`, `readme_ack`, `readme_hub` (et `baseline` comme témoin) : activer, **L4**, puis :
+Dépend du modèle : répéter par modèle disponible dans le host (Claude : Sonnet, Opus, Fable ; ChatGPT : au moins le modèle par défaut et un modèle de raisonnement). Pour chaque scénario `readme_instructions`, `readme_descriptions`, `readme_name_first`, `readme_gate`, `readme_ack`, `readme_hub` (et `baseline` comme témoin) : activer, **L4**, puis :
 
-1. Nouvelle conversation, prompt **P12** (ne mentionne jamais le readme) : « Use the bench server to echo the message "hello". »
+1. Nouvelle conversation, **P0** avec le tag du modèle, puis prompt **P12** (ne mentionne jamais le readme) : « Use the bench server to echo the message "hello". »
 2. Même conversation, **P13** : « Now echo "again". »
 3. Nouvelle conversation, P12 encore.
 4. Pour `readme_ack` et `readme_gate` : relever les erreurs (**Q6**) et le nombre d'essais avant succès.
@@ -190,3 +193,12 @@ limit 50;
 ```sql
 delete from bench_events where user_agent = $UA and ip = $IP;
 ```
+
+**Q8. Tags de session (host/modèle) et bornes des conversations**
+```sql
+select ts, user_agent, ip, args->>'note' as session_tag
+from bench_events
+where method = 'tools/call' and tool_name = 'bench_whoami' and args ? 'note'
+order by ts desc;
+```
+Chaque ligne ouvre une conversation de test ; les événements de la même empreinte entre deux tags appartiennent à la conversation du premier. Pour Q5, filtrer sur l'intervalle du tag voulu au lieu du trou de 30 minutes quand les conversations s'enchaînent vite.

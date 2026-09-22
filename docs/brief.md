@@ -34,7 +34,7 @@ Un serveur MCP unique sur Vercel dont les tools, les instructions et l'identité
 3. Quatre sondes : `bench_whoami`, `bench_echo`, `bench_mutate`, `bench_readme`.
 4. Leviers de lecture du readme configurables par scénario : instructions, descriptions, name_first, gate, ack, hub.
 5. Catalogue de scénarios généré par script, avec canaris : longueur des descriptions, des noms, des instructions ; nombre de tools ; identité serveur ; forme des schémas.
-6. Protocole manuel par host et grille de résultats.
+6. Protocole manuel par host et par modèle (Claude : Sonnet, Opus, Fable ; ChatGPT : modèles du sélecteur) et grille de résultats. Le serveur ne voit que le host : le testeur tague chaque session (host/modèle) au premier appel de `bench_whoami`.
 7. Restitution dans mcp-patterns.md, CLAUDE.md règle MCP 6, template golden queries, puis report dans le template Tiple.
 
 ### OUT — Ce qu'on ne fait PAS

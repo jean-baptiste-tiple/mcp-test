@@ -28,6 +28,7 @@ Phase 2 (E02, Draft) : passage **stateful** uniquement pour la mesure de `list_c
 
 ### Neutres
 - `capabilities.tools.listChanged` est déclaré dès la phase 1 pour observer si un host change de comportement en le voyant.
+- En stateless, une notification ne peut être livrée que **dans le flux de réponse de la requête en cours** (`relatedRequestId`). `bench_mutate` émet `notifications/tools/list_changed` sur le flux de son propre `tools/call` : `list_changed_sent = true` signifie « écrite dans ce flux », pas « traitée par le host ». Mesure de phase 1 : le host relit-il `tools/list` après cette notification ? Le push hors requête (session ouverte) reste E02.
 
 ## Alternatives considérées
 

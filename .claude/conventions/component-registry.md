@@ -1,6 +1,6 @@
 # Component Registry
 
-> Derniere MAJ : 2026-09-22 (E01-S02)
+> Derniere MAJ : 2026-09-22 (E01-S04)
 > VERIFIER ce fichier AVANT de creer un composant/hook/util.
 
 ## UI Components (Shadcn/ui — installes)
@@ -72,7 +72,7 @@
 
 | Schema | Path | Champs cles | Utilise par |
 |--------|------|-------------|-------------|
-<!-- Ajouter ici chaque schema Zod partage front/back -->
+| BenchMutateInput | src/lib/schemas/bench-mutate.ts | action (enum), name, title, description, input_schema, instructions | tool `bench_mutate` (seule mutation du banc) |
 
 ## Utils
 
@@ -87,8 +87,17 @@
 | Type | Path | Usage |
 |------|------|-------|
 | BenchScenarioRow, BenchToolRow, BenchEventInsert | src/mcp/bench/repository.ts | Alias des types générés `Database` — ne pas redéfinir |
-| BenchRepository (+ SupabaseBenchRepository, MemoryBenchRepository) | src/mcp/bench/repository.ts | Accès aux tables du banc ; client injecté ; impl mémoire pour les tests |
+| BenchRepository, SupabaseBenchRepository | src/mcp/bench/repository.ts | Accès aux tables du banc ; client injecté ; mutations (updates posent `updated_at`), `hasRecentReadmeCall` |
 | BenchSnapshot, loadSnapshot | src/mcp/bench/snapshot.ts | Scénario actif + tools activés, relu à chaque requête ; snapshot vide fabriqué à neuf (jamais partagé) |
 | parseRpcBody, logEvents | src/mcp/bench/events.ts | Journal JSON-RPC → `bench_events` (`BenchEventInsert`), plafonné à 100 événements par requête, jamais bloquant |
-| Handler, ToolHandler, toToolList, dispatchToolCall | src/mcp/bench/registry.ts | Point d'extension des sondes (S03) |
+| Handler, ToolHandler, dispatchToolCall | src/mcp/bench/registry.ts | Dispatch par `handler`, gardes ack / gate, erreurs actionnables ; les handlers sont dans `handlers/` |
+| applyLever | src/mcp/bench/levers.ts | Fonction pure : lignes → tools JSON Schema brut + six leviers readme (textes d'architecture §6) |
+| makeAck, verifyAck, getAckSecret | src/mcp/bench/ack.ts | Ack HMAC-SHA256 base32 12 car., fenêtre TTL, `timingSafeEqual`, secret requis en prod |
+| BenchRequestContext, outcomeFor | src/mcp/bench/context.ts | Contexte par requête (server, repo, headers, fingerprint, requestId brut, outcomes) |
+| whoamiHandler, mutateHandler, readmeHandler, echoHandler | src/mcp/bench/handlers/*.ts | Les 4 sondes ; `mutate` = seule mutation réelle |
+| MemoryBenchRepository | src/mcp/bench/repository.memory.ts | Implémentation mémoire pour les tests (extraite de `repository.ts`) |
+| isRecord | src/lib/utils/is-record.ts | Garde de type objet simple (events, levers) |
 | makeScenario, makeTool | tests/factories/bench.factory.ts | Fixtures scénario / tool de test |
+| PROBES, BASELINE | scripts/lib/probes.mjs | Source unique des 4 sondes et du scénario `baseline` (les migrations ne sont qu'un amorçage) |
+| buildCatalogue, canary, fillText | scripts/lib/catalogue.mjs (+ .d.mts) | Catalogue déterministe des scénarios du banc, canaris `[C:slug:field:pos:hex]` |
+| bench-seed | scripts/bench-seed.mjs | `pnpm bench:seed` : upsert idempotent des scénarios et tools, restaure `baseline`, jamais `is_active` |

@@ -63,7 +63,7 @@ graph LR
 | FR-PILOT-02 | Le script de seed crée ou met à jour (idempotent, par slug) le catalogue de scénarios avec canaris | Must | N/A | 🔶 |
 | FR-PILOT-03 | `bench_mutate` crée, modifie, active ou désactive un tool, ou remplace les instructions du scénario actif, et incrémente `server_version` | Must | N/A | 🔶 |
 | FR-PILOT-04 | Un seul scénario actif à la fois, garanti par contrainte en base | Should | N/A | 🔶 |
-| FR-PILOT-05 | `bench_mutate` tente d'émettre `notifications/tools/list_changed` et journalise si l'émission a eu lieu | Could | N/A | 🔶 |
+| FR-PILOT-05 | `bench_mutate` émet `notifications/tools/list_changed` dans le flux de réponse de sa propre requête (`relatedRequestId`, seule voie stateless) et journalise `list_changed_sent` = écriture réussie dans ce flux | Could | N/A | 🔶 |
 
 **Critères d'acceptation FR-PILOT-01 :**
 - [ ] Given un scénario actif avec 3 tools activés et 1 désactivé When un client appelle `tools/list` Then la réponse contient exactement les 3 tools activés, avec name, title, description, inputSchema et annotations des lignes
@@ -84,7 +84,7 @@ graph LR
 - [ ] Given un scénario actif When on active un second scénario en base Then l'insertion échoue (index unique partiel) tant que le premier n'est pas désactivé
 
 **Critères d'acceptation FR-PILOT-05 :**
-- [ ] Given le transport stateless When `bench_mutate` s'exécute Then l'événement journalisé porte `list_changed_sent = false` sans erreur retournée à l'agent
+- [ ] Given le transport stateless When `bench_mutate` s'exécute Then la notification `notifications/tools/list_changed` précède le résultat dans le flux de réponse du même appel et l'événement porte `list_changed_sent = true` ; Given un transport sans flux Then `list_changed_sent = false` sans erreur retournée à l'agent
 
 #### Exigences non-fonctionnelles
 
@@ -122,7 +122,7 @@ graph LR
 | ID | Description | Priorité | Référence UI | Statut |
 |----|------------|----------|----------|--------|
 | FR-OBS-01 | Chaque requête JSON-RPC reçue est journalisée : méthode, id, clientInfo (initialize), version de protocole, user-agent, IP, session id, tool et arguments (tools/call), scénario et version serveur servis | Must | N/A | 🔶 |
-| FR-OBS-02 | `bench_whoami` renvoie en texte : scénario actif, version serveur, en-têtes vus (user-agent, protocole, session), liste des tools servis avec leur version, hash des instructions et du readme | Must | N/A | 🔶 |
+| FR-OBS-02 | `bench_whoami` renvoie en texte : scénario actif, version serveur, en-têtes vus (user-agent, protocole, session), liste des tools servis avec leur version, hash des instructions et du readme ; accepte un `note` optionnel (tag host/modèle) renvoyé tel quel et journalisé avec l'appel, car le serveur ne voit jamais le modèle du host | Must | N/A | 🔶 |
 | FR-OBS-03 | `bench_echo` renvoie ses arguments tels que reçus (test des changements de schéma) | Must | N/A | 🔶 |
 | FR-OBS-04 | `tools/list` journalise le nombre de tools servis et la taille en caractères de la liste sérialisée | Should | N/A | 🔶 |
 | FR-OBS-05 | Les tools générés (handler echo) acceptent n'importe quel argument et le renvoient, sans validation autre qu'un plafond de taille | Should | N/A | 🔶 |

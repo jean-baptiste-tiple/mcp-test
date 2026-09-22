@@ -7,7 +7,7 @@
 - Variables/fonctions : camelCase
 - Types/Interfaces : PascalCase avec suffixe descriptif (`UserRow`, `LoginFormData`)
 - Server Actions : camelCase avec suffixe `Action` (`loginAction`, `createProjectAction`)
-- Zod schemas : camelCase avec suffixe `Schema` (`loginSchema`, `projectSchema`)
+- Zod schemas : camelCase avec suffixe `Schema` (`loginSchema`, `projectSchema`) ; exception : les schémas d'input de tools MCP s'appellent `<Tool>Input` en PascalCase (`ArchiveDocumentInput`, `BenchMutateInput`), conformément à mcp-patterns §1 et au starter
 
 ## Structure des fichiers
 

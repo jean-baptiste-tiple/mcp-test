@@ -1,8 +1,9 @@
 // Journal : body JSON-RPC + en-têtes → lignes bench_events, et robustesse de l'écriture.
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { logEvents, parseRpcBody } from "@/mcp/bench/events"
-import { MemoryBenchRepository } from "@/mcp/bench/repository"
+import type { ToolOutcome } from "@/mcp/bench/context"
+import { applyOutcomes, httpEvent, logEvents, parseRpcBody } from "@/mcp/bench/events"
+import { MemoryBenchRepository } from "@/mcp/bench/repository.memory"
 import { loadSnapshot } from "@/mcp/bench/snapshot"
 import { MAX_EVENTS_PER_REQUEST, MAX_LOGGED_ARGS_BYTES } from "@/mcp/config"
 
@@ -178,6 +179,72 @@ describe("parseRpcBody", () => {
 
     expect(parseRpcBody("pas du json", HEADERS, snapshot)).toEqual([])
     expect(parseRpcBody(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), HEADERS, snapshot)).toEqual([])
+  })
+})
+
+describe("httpEvent", () => {
+  it("journalise un GET avec l'empreinte et les en-têtes, sans scénario servi", () => {
+    expect(httpEvent("GET", HEADERS)).toEqual({
+      method: "http:GET",
+      scenario_slug: null,
+      server_version: null,
+      user_agent: "claude-code/1.2",
+      ip: "203.0.113.7",
+      session_id: "sess-42",
+      protocol_version: "2025-06-18",
+    })
+  })
+
+  it("journalise un DELETE de la même façon", () => {
+    expect(httpEvent("DELETE", new Headers()).method).toBe("http:DELETE")
+  })
+})
+
+describe("applyOutcomes", () => {
+  async function callEvents() {
+    return parseRpcBody(
+      `[${rpc("tools/call", { name: "bench_mutate", arguments: {} }, 7)},${rpc(
+        "tools/call",
+        { name: "bench_echo", arguments: {} },
+        8
+      )}]`,
+      HEADERS,
+      await snapshotWith()
+    )
+  }
+
+  it("recolle list_changed_sent, is_error et error_text par rpc_id", async () => {
+    const events = await callEvents()
+    const outcomes = new Map<string, ToolOutcome>([
+      ["7", { listChangedSent: false }],
+      ["8", { isError: true, errorText: "Call bench_readme first." }],
+    ])
+
+    applyOutcomes(events, outcomes)
+
+    expect(events[0]).toMatchObject({ rpc_id: "7", list_changed_sent: false })
+    expect(events[1]).toMatchObject({
+      rpc_id: "8",
+      is_error: true,
+      error_text: "Call bench_readme first.",
+    })
+  })
+
+  it("laisse intacts les événements sans outcome", async () => {
+    const events = await callEvents()
+
+    applyOutcomes(events, new Map())
+
+    expect(events[0].list_changed_sent).toBeUndefined()
+    expect(events[0].is_error).toBeUndefined()
+  })
+
+  it("neutralise les caractères que jsonb refuse dans error_text", async () => {
+    const events = await callEvents()
+
+    applyOutcomes(events, new Map([["7", { isError: true, errorText: "bad\u0000text" }]]))
+
+    expect(events[0].error_text).toBe("bad�text")
   })
 })
 

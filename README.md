@@ -61,6 +61,40 @@ Ensuite : `pnpm db:migrate <nom>` (nouvelle migration SQL), `pnpm db:push` (appl
 cloud), `pnpm db:types` (régénère `src/types/database.ts`). Le lien est stocké dans
 `supabase/.temp/` (gitignoré).
 
+### Scénarios du banc
+
+Un scénario = une ligne `bench_scenarios` + ses lignes `bench_tools`. Le catalogue vit dans
+`scripts/lib/catalogue.mjs` (générateur déterministe : longueurs de descriptions, nombres de
+tools, longueurs d'instructions, formes de schéma, leviers readme, canaris `[C:…]`) et
+`pnpm bench:seed` le pousse en base :
+
+```bash
+pnpm bench:seed
+```
+
+Pré-requis : migrations appliquées (`pnpm db:push`). Les quatre sondes (`bench_whoami`,
+`bench_echo`, `bench_mutate`, `bench_readme`) sont déclarées dans `scripts/lib/probes.mjs` —
+source unique, copiée à l'identique dans chaque scénario. Toute évolution d'une sonde se fait
+là, puis `pnpm bench:seed` ; les migrations ne servent plus que d'amorçage historique.
+
+`pnpm bench:seed` **restaure aussi `baseline`** (sondes, instructions, readme, version) et
+supprime les tools qu'une campagne y a ajoutés — c'est la remise d'aplomb décrite dans
+`docs/bench/protocol.md` §3. Ce que le seed ne fait jamais : écrire `is_active`. Il est
+idempotent, et c'est lisible dans son résumé — deuxième passe sur une base déjà seedée :
+
+```
+scénarios : 0 créés, 0 mis à jour, 27 inchangés (sur 27)
+tools     : 0 insérés, 0 mis à jour, 0 supprimés
+```
+
+Il peut donc se relancer au milieu d'une campagne sans changer ce que le host voit.
+
+**Activer un scénario** = un geste manuel, dans Supabase Studio (table `bench_scenarios`) :
+passer `is_active` à `true` sur la ligne voulue. Un index unique partiel garantit **un seul
+scénario actif** : désactiver l'ancien d'abord. La liste des scénarios et les prompts à jouer
+sur chacun sont dans `docs/bench/protocol.md`. `baseline` fait partie du catalogue : c'est le
+scénario témoin, actif par défaut.
+
 ## Le canal MCP en bref
 
 Les invariants que le template impose (détail dans `.claude/conventions/mcp-patterns.md`) :

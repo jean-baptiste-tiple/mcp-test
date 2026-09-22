@@ -3,15 +3,13 @@
 // Le transport étant stateless (ADR-001), l'empreinte (user_agent, ip) est le seul lien
 // entre deux requêtes d'une même conversation.
 import { byteLength, truncateToBytes } from "@/lib/utils/byte-size"
+import { isRecord } from "@/lib/utils/is-record"
 import { MAX_EVENTS_PER_REQUEST, MAX_LOGGED_ARGS_BYTES } from "@/mcp/config"
 
-import type { BenchEventInsert, BenchRepository } from "./repository"
-import { toToolList } from "./registry"
+import type { ToolOutcome } from "./context"
+import { applyLever } from "./levers"
+import type { BenchEventInsert, BenchFingerprint, BenchRepository } from "./repository"
 import type { BenchSnapshot } from "./snapshot"
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
 
 /** Une requête ou notification JSON-RPC ; une réponse (sans `method`) n'est pas journalisée. */
 function isRpcRequest(value: unknown): value is Record<string, unknown> & { method: string } {
@@ -45,6 +43,61 @@ function firstForwardedIp(headers: Headers): string | null {
   if (forwarded === null) return null
   const first = forwarded.split(",")[0]?.trim()
   return first ? first : null
+}
+
+/**
+ * Empreinte du host. Exportée parce que la route en a besoin AVANT le journal : le levier
+ * `gate` interroge `bench_events` avec exactement la même empreinte que celle écrite ici —
+ * deux calculs différents et le gate ne retrouverait jamais l'appel readme.
+ */
+export function fingerprintFrom(headers: Headers): BenchFingerprint {
+  return { userAgent: header(headers, "user-agent"), ip: firstForwardedIp(headers) }
+}
+
+/**
+ * Événement d'une requête SANS body JSON-RPC (GET, DELETE). « Ce host a tenté d'ouvrir le
+ * flux SSE » est une mesure du banc (E02) : sans cette ligne, la tentative est invisible.
+ */
+export function httpEvent(method: "GET" | "DELETE", headers: Headers): BenchEventInsert {
+  const fingerprint = fingerprintFrom(headers)
+
+  return {
+    method: `http:${method}`,
+    // Aucun snapshot n'est chargé pour ces requêtes : rien à servir, donc rien à dénormaliser.
+    scenario_slug: null,
+    server_version: null,
+    user_agent: fingerprint.userAgent,
+    ip: fingerprint.ip,
+    session_id: header(headers, "mcp-session-id"),
+    protocol_version: header(headers, "mcp-protocol-version"),
+  }
+}
+
+/**
+ * Fusionne ce que seul le serveur sait (notification envoyée, erreur servie) dans les
+ * événements `tools/call`, par `rpc_id`. Le body JSON-RPC ne porte que la QUESTION ; sans
+ * cette passe, les colonnes list_changed_sent / is_error / error_text restent vides.
+ */
+export function applyOutcomes(
+  events: BenchEventInsert[],
+  outcomes: Map<string, ToolOutcome>
+): void {
+  if (outcomes.size === 0) return
+
+  for (const event of events) {
+    if (event.method !== "tools/call" || typeof event.rpc_id !== "string") continue
+
+    const outcome = outcomes.get(event.rpc_id)
+    if (!outcome) continue
+
+    if (outcome.listChangedSent !== undefined) event.list_changed_sent = outcome.listChangedSent
+    if (outcome.isError !== undefined) event.is_error = outcome.isError
+    if (outcome.errorText !== undefined) {
+      // Un message d'erreur reprend des valeurs venues du host (nom de tool inconnu) :
+      // mêmes plafond et neutralisation que `args`, sinon un INSERT peut échouer.
+      event.error_text = truncateToBytes(sanitize(outcome.errorText), MAX_LOGGED_ARGS_BYTES)
+    }
+  }
 }
 
 /**
@@ -104,17 +157,19 @@ export function parseRpcBody(
     console.warn("[bench] batch tronqué", { received: requests.length, kept: messages.length })
   }
 
+  const fingerprint = fingerprintFrom(headers)
   const common = {
     scenario_slug: snapshot.scenario?.slug ?? null,
     server_version: snapshot.serverInfo.version,
-    user_agent: header(headers, "user-agent"),
-    ip: firstForwardedIp(headers),
+    user_agent: fingerprint.userAgent,
+    ip: fingerprint.ip,
     session_id: header(headers, "mcp-session-id"), // toujours nul en stateless (ADR-001)
     protocol_version: header(headers, "mcp-protocol-version"),
   }
 
-  // Ce que tools/list servira : calculé une fois même si le batch en contient plusieurs.
-  let served: ReturnType<typeof toToolList> | null = null
+  // Ce que tools/list servira RÉELLEMENT, levier readme appliqué : sous `ack` ou `hub` la
+  // liste n'a ni la même taille ni le même contenu que les lignes brutes.
+  let served: ReturnType<typeof applyLever>["tools"] | null = null
 
   return messages.map((message) => {
     const params = isRecord(message.params) ? message.params : {}
@@ -136,7 +191,7 @@ export function parseRpcBody(
     }
 
     if (message.method === "tools/list") {
-      served ??= toToolList(snapshot)
+      served ??= applyLever(snapshot).tools
       event.tools_served = served.length
       event.response_chars = JSON.stringify(served).length
     }

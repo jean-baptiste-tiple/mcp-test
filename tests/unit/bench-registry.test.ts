@@ -1,15 +1,21 @@
 // Snapshot et registre : ce qu'un host VOIT (tools/list) et ce qu'il OBTIENT (tools/call),
 // sans MCP ni HTTP. Le passage par le vrai protocole est dans mcp-server.test.ts.
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { dispatchToolCall, toToolList } from "@/mcp/bench/registry"
-import { MemoryBenchRepository } from "@/mcp/bench/repository"
+import { applyLever } from "@/mcp/bench/levers"
+import { dispatchToolCall } from "@/mcp/bench/registry"
+import { MemoryBenchRepository } from "@/mcp/bench/repository.memory"
 import { loadSnapshot } from "@/mcp/bench/snapshot"
 import { MAX_TOOL_ARGS_BYTES } from "@/mcp/config"
 
-import { makeScenario, makeTool } from "../factories/bench.factory"
+import { makeScenario, makeTool, makeToolContext } from "../factories/bench.factory"
 
 const scenario = makeScenario()
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.restoreAllMocks()
+})
 
 describe("loadSnapshot", () => {
   it("ne garde que les tools activés, triés par sort_order", async () => {
@@ -47,7 +53,9 @@ describe("loadSnapshot", () => {
   })
 })
 
-describe("toToolList", () => {
+// Levier `none` : `applyLever` est alors l'identité, donc c'est bien la transformation
+// lignes → Tool[] qui est mesurée ici.
+describe("tools servis (levier none)", () => {
   it("sert name, title, description, inputSchema et annotations tels quels, sans _meta", async () => {
     const inputSchema = {
       type: "object",
@@ -64,7 +72,7 @@ describe("toToolList", () => {
       }),
     ])
 
-    const [tool] = toToolList(await loadSnapshot(repo))
+    const [tool] = applyLever(await loadSnapshot(repo)).tools
 
     expect(tool).toEqual({
       name: "bench_echo",
@@ -79,7 +87,7 @@ describe("toToolList", () => {
   it("omet title et annotations quand les colonnes sont nulles", async () => {
     const repo = new MemoryBenchRepository(scenario, [makeTool({ name: "bench_bare" })])
 
-    const [tool] = toToolList(await loadSnapshot(repo))
+    const [tool] = applyLever(await loadSnapshot(repo)).tools
 
     expect(Object.keys(tool)).toEqual(["name", "description", "inputSchema"])
   })
@@ -90,7 +98,7 @@ describe("dispatchToolCall", () => {
     const repo = new MemoryBenchRepository(scenario, [makeTool({ name: "bench_echo" })])
     const args = { message: "x", extra: 1 }
 
-    const result = dispatchToolCall(await loadSnapshot(repo), "bench_echo", args)
+    const result = await dispatchToolCall(await loadSnapshot(repo), "bench_echo", args, makeToolContext())
 
     expect(result.isError).toBeFalsy()
     expect(result.content).toEqual([{ type: "text", text: JSON.stringify(args) }])
@@ -101,7 +109,7 @@ describe("dispatchToolCall", () => {
     const repo = new MemoryBenchRepository(scenario, [makeTool({ name: "bench_echo" })])
     const args = { message: "x".repeat(MAX_TOOL_ARGS_BYTES + 1) }
 
-    const result = dispatchToolCall(await loadSnapshot(repo), "bench_echo", args)
+    const result = await dispatchToolCall(await loadSnapshot(repo), "bench_echo", args, makeToolContext())
 
     expect(result.isError).toBe(true)
     const [block] = result.content as { type: string; text: string }[]
@@ -112,7 +120,7 @@ describe("dispatchToolCall", () => {
   it("un tool inconnu répond isError, sans exception", async () => {
     const repo = new MemoryBenchRepository(scenario, [makeTool({ name: "bench_echo" })])
 
-    const result = dispatchToolCall(await loadSnapshot(repo), "ghost_tool", {})
+    const result = await dispatchToolCall(await loadSnapshot(repo), "ghost_tool", {}, makeToolContext())
 
     expect(result.isError).toBe(true)
     expect(result.content).toEqual([
@@ -120,15 +128,37 @@ describe("dispatchToolCall", () => {
     ])
   })
 
-  it("un tool listé dont le handler n'est pas implémenté répond isError", async () => {
-    const repo = new MemoryBenchRepository(scenario, [
-      makeTool({ name: "bench_whoami", handler: "whoami" }),
+  it("transforme une erreur de configuration serveur en résultat MCP isError", async () => {
+    // Secret absent en production : `getAckSecret()` JETTE. Sans filet, l'agent reçoit une
+    // erreur de protocole opaque et le journal ne garde aucune trace de la panne.
+    vi.stubEnv("BENCH_ACK_SECRET", "")
+    vi.stubEnv("NODE_ENV", "production")
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+    const repo = new MemoryBenchRepository(makeScenario({ readme_lever: "ack" }), [
+      makeTool({ name: "bench_echo" }),
     ])
+    const ctx = makeToolContext()
 
-    const result = dispatchToolCall(await loadSnapshot(repo), "bench_whoami", {})
+    const result = await dispatchToolCall(await loadSnapshot(repo), "bench_echo", {}, ctx)
 
     expect(result.isError).toBe(true)
     const [block] = result.content as { type: string; text: string }[]
-    expect(block.text).toContain('handler "whoami" is not implemented')
+    expect(block.text).toBe(
+      "Server misconfiguration: BENCH_ACK_SECRET missing. Ask the operator to check BENCH_ACK_SECRET."
+    )
+    expect(consoleError).toHaveBeenCalled()
+    expect([...ctx.outcomes.values()][0]?.isError).toBe(true)
+  })
+
+  it("un tool listé dont le handler n'est pas implémenté répond isError", async () => {
+    const repo = new MemoryBenchRepository(scenario, [
+      makeTool({ name: "bench_ghost", handler: "ghost" }),
+    ])
+
+    const result = await dispatchToolCall(await loadSnapshot(repo), "bench_ghost", {}, makeToolContext())
+
+    expect(result.isError).toBe(true)
+    const [block] = result.content as { type: string; text: string }[]
+    expect(block.text).toContain('handler "ghost" is not implemented')
   })
 })

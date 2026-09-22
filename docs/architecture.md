@@ -56,11 +56,12 @@ src/
 │   └── bench/
 │       ├── repository.ts             # Interface BenchRepository + SupabaseBenchRepository + MemoryBenchRepository
 │       ├── snapshot.ts               # loadSnapshot(repo) : scénario actif + tools activés
-│       ├── registry.ts               # rows → Tool[] (JSON Schema brut) ; dispatch tools/call
-│       ├── levers.ts                 # applyLever(scenario, tools, instructions) : fonction pure
+│       ├── registry.ts               # dispatch tools/call par handler, gardes ack / gate
+│       ├── levers.ts                 # rows → Tool[] (JSON Schema brut) + applyLever : fonctions pures, sans import runtime
+│       ├── context.ts                # BenchRequestContext, outcomes par requestId (évite le cycle registry → handlers → levers)
 │       ├── ack.ts                    # makeAck / verifyAck (HMAC SHA-256, fenêtre TTL)
-│       ├── events.ts                 # parse JSON-RPC → BenchEvent[] ; logEvents(repo)
-│       ├── canary.ts                 # (S04) format et détection des canaris
+│       ├── events.ts                 # parse JSON-RPC → BenchEventInsert[] ; logEvents(repo) ; outcomes
+│       ├── repository.memory.ts      # implémentation mémoire (tests)
 │       └── handlers/
 │           ├── echo.ts
 │           ├── whoami.ts
@@ -71,9 +72,11 @@ src/
 │   └── supabase/admin.ts             # createClient(url, SUPABASE_SECRET_KEY) — serveur uniquement (ADR-002)
 └── types/database.ts                 # généré par supabase gen types
 scripts/
-├── smoke-mcp.mjs                     # initialize + tools/list + bench_whoami contre une URL
-├── bench-seed.mjs                    # pousse le catalogue en base (idempotent par slug)
-└── lib/catalogue.mjs                 # catalogue des scénarios + générateur de canaris (testé par vitest)
+├── smoke-mcp.mjs                     # initialize + tools/list + bench_whoami + bench_echo + mutate contre une URL
+├── bench-seed.mjs                    # pousse le catalogue en base (idempotent par slug), restaure baseline, jamais is_active
+└── lib/
+    ├── probes.mjs                    # SOURCE UNIQUE des 4 sondes et du scénario baseline (les migrations n'amorcent)
+    └── catalogue.mjs                 # catalogue des scénarios + générateur de canaris (testé par vitest)
 supabase/
 ├── config.toml
 └── migrations/
@@ -172,13 +175,14 @@ N/A : aucune interface web. Les mutations passent par `bench_mutate` (tool, Zod)
 2. `loadSnapshot(repo)` lit le scénario actif et ses tools activés (aucun cache).
 3. `createMcpHandler` est appelé **par requête** avec `serverInfo` et `instructions` du snapshot et `capabilities.tools.listChanged = true`.
 4. Le callback d'init pose deux handlers bas niveau sur `server.server` : `ListToolsRequestSchema` renvoie `applyLever(snapshot)` ; `CallToolRequestSchema` dispatche par `handler`. Aucun `registerTool` (il installerait ses propres handlers).
-5. La réponse est renvoyée ; `after()` (next/server) journalise les événements. Échec du journal = `console.error`, jamais une erreur MCP.
+5. La réponse est renvoyée ; `after()` (next/server) journalise les événements. Échec du journal = `console.error`, jamais une erreur MCP. Les handlers de tools renseignent un `outcome` par `rpc_id` (`list_changed_sent`, `is_error`, `error_text`) que la route fusionne dans les événements `tools/call` avant écriture (S03).
+6. GET et DELETE ne chargent pas de snapshot : journalisés comme `http:GET` / `http:DELETE` (le host tente d'ouvrir le flux SSE) puis 405 (S03).
 
 ### Tools
 
 | Tool | Input | Effet | Widget | Parcours |
 |------|-------|-------|--------|----------|
-| bench_whoami | `{ack?}` | Lecture : scénario, version, en-têtes, tools servis, hashes | N/A | 4.2 |
+| bench_whoami | `{note?, ack?}` | Lecture : scénario, version, en-têtes, tools servis, hashes ; `note` = tag host/modèle du testeur, renvoyé et journalisé | N/A | 4.2 |
 | bench_echo | `{message?, ack?, ...}` | Lecture : renvoie les arguments | N/A | 4.2 |
 | bench_mutate | Zod `bench-mutate.ts` | Écriture : tools et instructions du scénario actif, bump version, tentative `list_changed` | N/A | 4.1 |
 | bench_readme | `{}` | Lecture : `readme_content` + ack | N/A | 4.3 |
@@ -194,7 +198,7 @@ Les sondes sont des lignes `bench_tools` avec `handler` non-echo : leurs nom, ti
 | instructions | Instructions préfixées : « ALWAYS call bench_readme before any other tool of this server, once per conversation. » |
 | descriptions | Descriptions non-readme préfixées : « Requires bench_readme first (call it once per conversation before this tool). » |
 | name_first | Readme renommé `bench_00_readme`, `sort_order` forcé en tête |
-| gate | Liste inchangée ; `tools/call` non-readme rejeté sans événement readme récent de la même empreinte (user_agent, ip) dans `ack_ttl_seconds` (défaut 1800) |
+| gate | Liste inchangée ; `tools/call` non-readme rejeté sans événement readme récent de la même empreinte (user_agent, ip) dans `ack_ttl_seconds` (défaut 1800). L'empreinte est fournie par l'appelant : le gate est un instrument de mesure, pas un contrôle d'accès (ADR-002) |
 | ack | Propriété requise `ack` ajoutée à chaque tool non-readme ; `tools/call` vérifie `verifyAck` |
 | hub | Descriptions non-readme remplacées par « <name>: see bench_readme for usage. » |
 

@@ -1,6 +1,11 @@
 // Lignes de bench_scenarios / bench_tools pour les tests. Factorisé ici parce que les trois
 // fichiers de test du banc ont besoin des MÊMES lignes complètes : sans ça, chaque test
 // recopie les 13 colonnes et une colonne ajoutée casse trois fichiers.
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
+
+import type { BenchToolContext } from "@/mcp/bench/context"
+import { fingerprintFrom } from "@/mcp/bench/events"
+import { MemoryBenchRepository } from "@/mcp/bench/repository.memory"
 import type { BenchScenarioRow, BenchToolRow } from "@/mcp/bench/repository"
 
 const SCENARIO_ID = "11111111-1111-1111-1111-111111111111"
@@ -21,6 +26,26 @@ export function makeScenario(overrides: Partial<BenchScenarioRow> = {}): BenchSc
     is_active: true,
     created_at: NOW,
     updated_at: NOW,
+    ...overrides,
+  }
+}
+
+/**
+ * Contexte d'un `tools/call`. Le McpServer par défaut n'est connecté à AUCUN transport :
+ * `sendToolListChanged()` y rejette, ce qui reproduit exactement le cas stateless du banc
+ * (ADR-001). Passer un serveur connecté pour tester la branche « envoi réussi ».
+ */
+export function makeToolContext(overrides: Partial<BenchToolContext> = {}): BenchToolContext {
+  const headers = overrides.headers ?? new Headers()
+
+  return {
+    repo: new MemoryBenchRepository(),
+    server: new McpServer({ name: "mcp-bench", version: "1.0.0" }),
+    headers,
+    fingerprint: fingerprintFrom(headers),
+    now: () => new Date(NOW),
+    outcomes: new Map(),
+    requestId: "1",
     ...overrides,
   }
 }

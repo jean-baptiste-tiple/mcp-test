@@ -2,15 +2,19 @@
 
 > Rempli à la main en suivant `docs/bench/protocol.md`. Chaque case porte la date (AAAA-MM-JJ) et le client loggé (`client_name@client_version`). Une case vide = non mesuré. Les conclusions alimentent E01-S05 (mcp-patterns.md).
 
-## Empreintes des hosts (Q1)
+## Empreintes des hosts (Q1) et modèles testés
 
-| Host | client_name@client_version | user_agent | Date |
-|------|----------------------------|------------|------|
-| Claude Code (CC) | | | |
-| Claude Desktop / Cowork (CD) | | | |
-| claude.ai web (CW) | | | |
-| ChatGPT developer mode (GPT) | | | |
-| MCP Inspector (INS) | | | |
+Une ligne par couple host × modèle (tag `note` de P0). Les grilles A, B, C sont mesurées sur le premier modèle de chaque host et contrôlées sur un second ; la grille D, la citation des canaris et les golden queries sont mesurées pour chaque ligne.
+
+| Host | Modèle (tag) | client_name@client_version | user_agent | Date |
+|------|--------------|----------------------------|------------|------|
+| Claude Code (CC) | claude-code/sonnet | | | |
+| Claude Code (CC) | claude-code/opus | | | |
+| Claude Code (CC) | claude-code/fable | | | |
+| Claude Desktop / Cowork (CD) | claude-desktop/… | | | |
+| claude.ai web (CW) | claude-web/… | | | |
+| ChatGPT developer mode (GPT) | chatgpt/… | | | |
+| MCP Inspector (INS) | inspector/none | | | |
 
 ## Grille A — Moments de lecture
 
@@ -38,6 +42,15 @@ Case = niveau minimal (L0 à L5) · `fetch:` oui/non (Q3) · date · client.
 | M5 Instructions modifiées | | | | |
 | M6 Identité serveur | | | | |
 
+Notification `list_changed` écrite dans le flux de réponse de `bench_mutate` (Q3 : `tools/list` spontané dans les secondes qui suivent ?) :
+
+| Host | tools/list spontané après bench_mutate | Délai | Date · client |
+|------|----------------------------------------|-------|---------------|
+| CC | | | |
+| CD | | | |
+| CW | | | |
+| GPT | | | |
+
 Notes (divergences « fetché mais ignoré », comportements inattendus) :
 
 -
@@ -63,24 +76,44 @@ Tailles servies (Q4) :
 |----------|-------|-------|----------|
 | | | | |
 
-## Grille D — Leviers readme
+## Grille D — Leviers readme (par modèle)
 
-Case = premier usage oui/non · chaque message oui/non · nouvelle conversation oui/non · erreurs · coût (chars × appels) · date · client.
+Dépend du modèle : une ligne par levier × modèle. Case = premier usage oui/non · chaque message oui/non · nouvelle conversation oui/non · erreurs · coût (chars × appels) · date. Pour GPT, le modèle de la ligne est celui de ChatGPT.
 
-| Levier | CC | CD | CW | GPT |
-|--------|----|----|----|-----|
-| none (témoin, `baseline`) | | | | |
-| instructions | | | | |
-| descriptions | | | | |
-| name_first | | | | |
-| gate | | | | |
-| ack | | | | |
-| hub | | | | |
+| Levier · modèle | CC | CD | CW | GPT |
+|-----------------|----|----|----|-----|
+| none (témoin) · sonnet | | | | |
+| none (témoin) · opus | | | | |
+| none (témoin) · fable | | | | |
+| instructions · sonnet | | | | |
+| instructions · opus | | | | |
+| instructions · fable | | | | |
+| descriptions · sonnet | | | | |
+| descriptions · opus | | | | |
+| descriptions · fable | | | | |
+| name_first · sonnet | | | | |
+| name_first · opus | | | | |
+| name_first · fable | | | | |
+| gate · sonnet | | | | |
+| gate · opus | | | | |
+| gate · fable | | | | |
+| ack · sonnet | | | | |
+| ack · opus | | | | |
+| ack · fable | | | | |
+| hub · sonnet | | | | |
+| hub · opus | | | | |
+| hub · fable | | | | |
 
-Contrôle P14 (« a lu » et pas seulement « a appelé ») :
+Contrôle P14 (« a lu » et pas seulement « a appelé »), par levier × modèle :
 
-| Levier | CC | CD | CW | GPT |
-|--------|----|----|----|-----|
+| Levier · modèle | CC | CD | CW | GPT |
+|-----------------|----|----|----|-----|
+| | | | | |
+
+Citation des canaris (P8, P6) par modèle sur le même host : si deux modèles diffèrent sur le même host et le même scénario, la limite est côté modèle (attention, mémoire), pas côté host.
+
+| Scénario · modèle | CC | CD | CW | GPT |
+|-------------------|----|----|----|-----|
 | | | | | |
 
 ## Frictions (P15)

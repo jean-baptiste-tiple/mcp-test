@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "mcp:smoke": "node scripts/smoke-mcp.mjs",
     "mcp:inspect": "npx @modelcontextprotocol/inspector",
+    "bench:seed": "node scripts/bench-seed.mjs",
     "db:types": "supabase gen types typescript --linked --schema public > src/types/database.ts",
     "db:migrate": "supabase migration new",
     "db:push": "supabase db push"

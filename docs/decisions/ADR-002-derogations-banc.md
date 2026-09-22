@@ -16,7 +16,7 @@ Pour le périmètre du banc (ce dépôt) :
 
 1. **Serveur public** : `/api/mcp` sans authentification en phase 1. L'OAuth devient une variable de test en E03, pas un prérequis.
 2. **Tools = données** : `bench_tools` porte name, description, `input_schema` en JSON Schema brut, annotations. Le code ne contient que quatre handlers (echo, whoami, mutate, readme). Pas de chaîne Zod → service → tool pour les tools générés ; Zod reste obligatoire pour la seule mutation réelle (`bench_mutate`).
-3. **Clé secrète Supabase côté serveur** dans `src/lib/supabase/admin.ts`, seul point d'accès aux tables du banc. RLS activé sans policy sur les trois tables : aucun accès par clé publique.
+3. **Clé secrète Supabase côté serveur** dans `src/lib/supabase/admin.ts`, seul point d'accès runtime aux tables du banc ; le script `scripts/bench-seed.mjs` (CLI locale, hors runtime web) est le second usage, avec la même clé lue dans `.env.local`. RLS activé sans policy sur les trois tables : aucun accès par clé publique.
 4. **Pas de widgets**, pas de `securitySchemes`, pas de `/.well-known/oauth-protected-resource` en phase 1.
 5. **Nombre de tools libre** : le plafond de 10 est une variable mesurée, pas une règle.
 6. **Pas de rate limiting** : URL non publiée, journal filtrable par empreinte.
