@@ -11,6 +11,15 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-09-23] — E04-S05 Prompts suggérés, bascules de mesure, golden queries proto
+**Quoi :** capacité `prompts` du serveur proto (un prompt par procédure suggérée et lisible, message = première phrase déclencheuse, journalisés) ; `pnpm proto:set` (domaines de la description de context, version des règles, ton d'un utilisateur) ; `docs/proto-golden-queries.md` ; section 8 de `docs/bench/protocol.md` (pré-requis, requêtes R1–R6 sur `proto.journal`, déroulé des sept mesures).
+**Pourquoi :** mesures 2, 5, 6 et 7 du doc fonctionnel et campagnes S06-S07 rejouables.
+**Écarté :** prompts en dur dans le code (le doc les porte comme contenu de l'organisation) ; bascules par SQL à la main pendant une campagne.
+**Fichiers :**
+- `src/proto/services/prompts.ts`, `src/proto/mcp/server.ts`, `scripts/proto-set.mjs`, `package.json`
+- `tests/integration/proto-prompts.test.ts`
+- `docs/proto-golden-queries.md`, `docs/bench/protocol.md`, `docs/architecture.md`, `docs/stories/E04-S05-prompts-variantes-golden.md`, `.claude/conventions/component-registry.md`, `.claude/sprint/status.md`
+
 ## [2026-09-23] — E04-S03 et E04-S04 read, write et call
 **Quoi :** `read` (plan au-delà de 12 000 caractères, section par titre, changements depuis une révision, contrat d'une fonction, tableau), `write` (opérations par section, brouillon, publication, garde de révision et de brouillon, phrases de procédure, publication du guide → version des règles + 1). `call` : catalogue de 13 fonctions, arguments stricts, droits d'équipe avec refus nommant le responsable, confirmation en deux temps ; tableaux (`table.rows`, `aggregate`, `write` avec set / clear / verified_empty et null refusé, `claim`, `release`, `schema`), connecteurs simulés (sellsy, mail, slack), sondes `probe.payload` et `probe.echo`. `find` cherche aussi les fonctions. Procédures du seed réécrites dans la vraie forme de l'appel, envoi en deux temps.
 **Pourquoi :** preuves 6 et 7 de l'epic E04, et tout ce que les procédures appellent.

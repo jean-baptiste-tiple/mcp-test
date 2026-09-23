@@ -5,7 +5,12 @@
 // Handlers BAS NIVEAU (comme le banc) et pas registerTool : la garde ctx doit rendre notre message
 // « call <prefix>_context first », pas l'erreur de validation générique du SDK sur un champ requis.
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js"
+import {
+  CallToolRequestSchema,
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js"
 
 import type { ProtoDb } from "../db"
 import type { Identity } from "../identity"
@@ -19,6 +24,7 @@ import { find } from "../services/find"
 import { read } from "../services/read"
 import { write } from "../services/write"
 import { type JournalEntry, loggedArgs } from "../services/journal"
+import { getPrompt, listPrompts } from "../services/prompts"
 import { buildTools, serverInstructions, toolKey } from "./tools"
 
 /** Version du contrat servi ; les hosts ne la montrent pas (E01), elle date le journal. */
@@ -39,7 +45,8 @@ export function buildServerOptions(identity: Identity) {
   return {
     serverInfo: { name: `${identity.org.prefix}-proto`, title: identity.org.name, version: PROTO_SERVER_VERSION },
     instructions: serverInstructions(identity.org),
-    capabilities: { tools: {} },
+    // prompts : prompts suggérés, mesure 2 du doc fonctionnel (E04-S05).
+    capabilities: { tools: {}, prompts: {} },
   }
 }
 
@@ -119,4 +126,25 @@ export function installProto(server: McpServer, deps: ProtoDeps): void {
   server.server.setRequestHandler(CallToolRequestSchema, (request) =>
     runTool(deps, request.params.name, (request.params.arguments ?? {}) as Record<string, unknown>)
   )
+
+  server.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    const prompts = await listPrompts(deps.db, deps.identity)
+    const listed = prompts.map(({ name, title, description }) => ({ name, title, description }))
+    deps.journal.push({ ...baseEntry(deps), method: "prompts/list", result_chars: JSON.stringify(listed).length })
+    return { prompts: listed }
+  })
+
+  server.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    const entry: JournalEntry = { ...baseEntry(deps), method: "prompts/get", target: request.params.name.slice(0, 200) }
+    try {
+      const prompt = await getPrompt(deps.db, deps.identity, request.params.name)
+      Object.assign(entry, { is_error: false, result_chars: prompt.text.length })
+      return { description: prompt.description, messages: [{ role: "user" as const, content: { type: "text" as const, text: prompt.text } }] }
+    } catch (error) {
+      Object.assign(entry, { is_error: true, error: error instanceof Error ? error.message : String(error) })
+      throw error // erreur JSON-RPC : le host montre « Unknown prompt »
+    } finally {
+      deps.journal.push(entry)
+    }
+  })
 }

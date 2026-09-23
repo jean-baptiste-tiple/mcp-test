@@ -94,6 +94,7 @@
 | callFunction | src/proto/services/call.ts | Droits d'équipe, arguments, confirmation en deux temps |
 | FUNCTIONS, defineFunction, describeFunction, searchFunctions | src/proto/functions/ | Catalogue des 13 fonctions (tableaux, sellsy, mail, slack, probe) |
 | canWrite, describeTeam | src/proto/identity.ts | Règle d'écriture ; équipe et responsable nommés dans un refus |
+| listPrompts, getPrompt | src/proto/services/prompts.ts | Prompts suggérés tirés des procédures (`meta.suggested`) |
 | flushJournal, initializeEntries, loggedArgs | src/proto/services/journal.ts | Journal proto : écriture qui n'échoue jamais, client de l'initialize, arguments tronqués à 2 ko |
 | buildTools, toolKey, serverInstructions | src/proto/mcp/tools.ts | Six outils par organisation (préfixe, descriptions, inputSchema) |
 | installProto, buildServerOptions | src/proto/mcp/server.ts | Adaptateur MCP proto (handlers bas niveau, garde ctx, journal) |

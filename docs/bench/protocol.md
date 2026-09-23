@@ -207,3 +207,77 @@ where method = 'tools/call' and tool_name = 'bench_whoami' and args ? 'note'
 order by ts desc;
 ```
 Chaque ligne ouvre une conversation de test ; les événements de la même empreinte entre deux tags appartiennent à la conversation du premier. Pour Q5, filtrer sur l'intervalle du tag voulu au lieu du trou de 30 minutes quand les conversations s'enchaînent vite.
+
+## 8. Serveur proto (E04)
+
+Maquette de la plateforme d'entreprise : `https://mcp-test-navy.vercel.app/api/proto/u/<utilisateur>/mcp` (architecture §9, ADR-003). Grille et résultats : `docs/bench/results-proto.md`. Prompts : `docs/proto-golden-queries.md`.
+
+### 8.1 Pré-requis
+
+1. `pnpm proto:seed` avant une campagne : remet Acme et Delta à zéro (journal, ctx, brouillons compris). Jamais pendant.
+   Entre deux hosts (ou deux modèles), sans perdre le journal : `pnpm proto:set acme prospects reset` remet le tableau `ventes/suivi_prospects` dans l'état du seed (D4 consomme la file « à traiter », D5 en agrège les chiffres).
+2. Deux connecteurs par host, branchés ensemble : **Acme** `…/api/proto/u/jb/mcp` et **Delta** `…/api/proto/u/jb-delta/mcp`. Noms de connecteur : « Acme » et « Delta ».
+   - Claude Code : fichier `--mcp-config` avec deux serveurs HTTP `acme` et `delta`, `--strict-mcp-config`, session neuve par prompt (`claude -p`), deuxième tour par `--resume <session_id>`.
+   - claude.ai : Paramètres → Connecteurs → Ajouter un connecteur personnalisé (fait avec JB). Premier message au moins 12 s après le chargement de la page.
+   - ChatGPT : Paramètres → Connecteurs → Mode développeur → Créer, sans auth (fait avec JB). Sélection par `@Acme` ou `@Delta`.
+3. Aucun prompt ne nomme un connecteur (sauf `@` sur ChatGPT). Le serveur ne voit pas le modèle : noter l'heure de début de chaque conversation et le modèle.
+
+### 8.2 Requêtes SQL (`proto.journal`)
+
+Remplacer `$T` par l'heure de début (UTC) de la conversation.
+
+**R1. Empreintes des hosts**
+```sql
+select j.client_name, j.user_agent, u.slug, min(j.ts) as first_seen, max(j.ts) as last_seen, count(*) as initializes
+from proto.journal j join proto.users u on u.id = j.user_id
+where j.method = 'initialize'
+group by 1, 2, 3 order by last_seen desc;
+```
+
+**R2. Chronologie d'une conversation**
+```sql
+select to_char(j.ts, 'HH24:MI:SS') as t, u.slug, j.method, j.tool, j.target, j.ctx,
+       j.args->'arguments' as arguments, j.args->>'confirm' as confirm,
+       j.args_chars, j.result_chars, j.is_error, j.error, j.duration_ms
+from proto.journal j join proto.users u on u.id = j.user_id
+where j.ts > '$T' and j.method in ('tools/call', 'prompts/list', 'prompts/get')
+order by j.ts, j.id;
+```
+Premier appel de la conversation = première ligne ; « deux appels avant la première action » = nombre de lignes avant le premier `call` d'une fonction de classe write ou sensitive.
+
+**R3. Confirmations (preuve 10)**
+```sql
+select to_char(ts, 'HH24:MI:SS') as t, ctx, args->'arguments'->>'id' as draft, args->>'confirm' as confirm, is_error, left(error, 80)
+from proto.journal where target = 'mail.send_draft' and ts > '$T' order by ts;
+```
+
+**R4. Tailles (mesures 3 et 4)**
+```sql
+select to_char(ts, 'HH24:MI:SS') as t, target, args->'arguments'->>'chars' as asked, args_chars, result_chars, is_error
+from proto.journal where target in ('probe.payload', 'probe.echo') and ts > '$T' order by ts;
+```
+
+**R5. Latence de context**
+```sql
+select count(*), percentile_cont(0.5) within group (order by duration_ms) as p50_ms, max(duration_ms)
+from proto.journal where tool like '%\_context' and ts > '$T';
+```
+
+**R6. Retours des assistants**
+```sql
+select f.id, f.type, f.text, f.created_at from proto.feedback f where f.created_at > '$T' order by f.id;
+```
+
+### 8.3 Les sept mesures du doc fonctionnel
+
+| # | Mesure | Bascule | Prompt | Lecture |
+|---|--------|---------|--------|---------|
+| 1 | Phrase dans les préférences | claude.ai : Paramètres → Profil → préférences ; ChatGPT : instructions personnalisées ; Claude Code : `--append-system-prompt`. Texte : « Quand une demande concerne mon travail (clients, devis, prospection, support, reporting), commence par le connecteur « Acme » : appelle son outil de contexte, puis suis la procédure qu'il renvoie. Si aucune procédure ne correspond, dis-le au lieu de deviner. » | D1, I2, avec puis sans la phrase | R2 : premier appel `acme_context` ? |
+| 2 | Prompts suggérés | capacité `prompts` (toujours active) | ouvrir le menu du host, choisir « Relancer les devis en attente » | où les prompts s'affichent, champs visibles ; R1/R2 : `prompts/list`, `prompts/get`, puis enchaînement |
+| 3 | Taille max d'un résultat lu en entier | aucune | « Appelle la fonction probe.payload avec chars = N, puis donne-moi le dernier code [C:proto:…] que tu vois. » N = 10 000, 25 000, 50 000, 100 000, 200 000 | dernier canari cité vs N ; troncature annoncée par le host ; R4 |
+| 4 | Taille max d'arguments | aucune | « Écris un texte d'environ N caractères (répète le paragraphe de la méthode d'étude) et passe-le à probe.echo. » N = 2 000, 8 000, 20 000, 50 000 | R4 `args_chars` reçus |
+| 5 | Expiration du ctx en pleine conversation | `pnpm proto:set acme rules bump` entre deux tours | tour 1 : D3 ; tour 2 : « Et le devis de la salle des sports ? » | R2 : erreur « context has changed » puis `acme_context` rappelé seul ? en combien d'appels ? |
+| 6 | Domaines dans la description de context | `pnpm proto:set acme domains null`, puis retour à la valeur du seed : `pnpm proto:set acme domains "sales, customer support, energy consulting"` ; geste de rafraîchissement du host entre les deux | I1 avec les autres connecteurs de JB actifs | R2 : quel connecteur est appelé en premier |
+| 7 | Ton servi par context | valeur du seed : `pnpm proto:set jb ton "Tutoiement, phrases courtes. Termine chaque réponse finale par la signature « — ton assistant Acme »."` | D3, I3 | la réponse finale tutoie-t-elle et porte-t-elle la signature ? |
+
+Rapport de frictions en fin de run sur chaque host (P15 adapté) : « Write a structured friction report about the Acme and Delta connectors: step by step what you did, where you hesitated or failed, what you think caused it, and a minimal reproduction for each issue. Mention anything about tool descriptions, the context result or the ctx code that was unclear, truncated or missing. » Recouper chaque fait avec R2.

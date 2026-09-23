@@ -333,6 +333,8 @@ Noms = `<prefix>_<outil>` calculés par requête depuis l'organisation de l'util
 
 **Confirmation** : une fonction `sensitive` sans `confirm: true` ne s'exécute pas et rend un récapitulatif nominatif avec la consigne de demander l'accord de l'utilisateur.
 
+**Prompts suggérés** (capacité `prompts`, mesure 2) : un prompt par procédure publiée, lisible et marquée `meta.suggested` ; nom = dernier segment du chemin, message = sa première phrase déclencheuse.
+
 **Journal** : l'adaptateur empile une entrée par requête traitée (initialize, tools/list, tools/call, prompts/*) ; la route les écrit dans `after()`. Un échec du journal ne change jamais la réponse.
 
 ### 9.5 Tests
