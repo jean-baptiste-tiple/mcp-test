@@ -505,12 +505,28 @@ const ACME = {
 
 // --- Delta Logistique ------------------------------------------------------------------------------
 
+const DELIVERY_STATES = ["à planifier", "planifiée", "livrée", "incident"]
+
+const DELIVERIES = [
+  ["C-2401", "Épicerie du Port", "12 quai des Mouettes, Saint-Arlan", "nord", "à planifier"],
+  ["C-2402", "Boulangerie des Tilleuls", "3 place du Marché, Valbrune", "sud", "à planifier"],
+  ["C-2403", "Pharmacie Centrale", "18 rue Haute, Brémontier", "nord", "à planifier"],
+  ["C-2404", "Fleuriste Les Iris", "7 rue des Lilas, Coudray-sur-Lise", "sud", "à planifier"],
+  ["C-2405", "Librairie du Plateau", "2 avenue de la Gare, Valbrune", "sud", "à planifier"],
+  ["C-2406", "Garage Moreau Frères", "45 route de la Lise, Brémontier", "nord", "à planifier"],
+  ["C-2407", "Cave de Haute-Lise", "9 chemin des Vignes, Haute-Lise", "nord", "planifiée"],
+  ["C-2408", "Supérette du Marché", "1 place du Marché, Saint-Arlan", "nord", "livrée"],
+]
+
 const DELTA = {
   slug: "delta",
   name: "Delta Logistique",
   prefix: "delta",
   domains: "logistics, delivery rounds, warehouse stock",
-  topics: [{ subject: "consignes d'entrepôt", path: "exploitation/consignes" }],
+  topics: [
+    { subject: "consignes d'entrepôt", path: "exploitation/consignes" },
+    { subject: "livraisons du jour", path: "exploitation/livraisons" },
+  ],
   teams: [
     {
       slug: "exploitation",
@@ -555,15 +571,55 @@ const DELTA = {
       sections: [{ title: "Horaires", body: "Quais ouverts de 5 h à 20 h ; départs des tournées à 6 h 30." }],
     },
     {
+      // Sans ce tableau, « planifie les tournées » n'a aucune donnée : mesuré sur Claude Code le
+      // 2026-09-23 (jusqu'à 11 find avant un ticket feedback).
+      path: "exploitation/livraisons",
+      team: "exploitation",
+      kind: "table",
+      title: "Livraisons du lendemain",
+      summary: "Les colis à livrer demain : client, zone, chauffeur affecté et statut ; la file des livraisons à planifier.",
+      sections: [],
+      meta: {
+        key: "colis",
+        state_column: "statut",
+        states: DELIVERY_STATES,
+        columns: [
+          { name: "client", type: "text" },
+          { name: "email", type: "text" },
+          { name: "adresse", type: "text" },
+          { name: "zone", type: "enum", values: ["nord", "sud"] },
+          { name: "chauffeur", type: "text" },
+          { name: "statut", type: "enum", values: DELIVERY_STATES },
+          { name: "notes", type: "text" },
+        ],
+      },
+      rows: DELIVERIES.map(([key, client, adresse, zone, statut]) => ({
+        key,
+        values: {
+          client,
+          email: `contact@${client.toLowerCase().normalize("NFD").replace(/[^a-z]/g, "")}.test`,
+          adresse,
+          zone,
+          statut,
+        },
+      })),
+    },
+    {
       path: "exploitation/planifier_tournee",
       team: "exploitation",
       kind: "procedure",
       meta: { suggested: true },
       title: "Planifier les tournées",
-      summary: "Répartit les livraisons du lendemain entre les chauffeurs et poste le plan sur Slack après accord.",
+      summary: "Répartit les livraisons à planifier du tableau exploitation/livraisons entre les chauffeurs et poste le plan sur Slack après accord.",
       sections: procedure(
         "La veille, pour organiser les livraisons du lendemain.",
-        [ANNOUNCE, "Propose une répartition par zone et par chauffeur.", "Après accord, poste le plan :\n" + dcall("slack.post_message", { channel: "#tournees", text: "<plan>" })],
+        [
+          ANNOUNCE,
+          "Lis les livraisons à planifier :\n" + dcall("table.rows", { table: "exploitation/livraisons", filter: { statut: "à planifier" } }),
+          "Propose une répartition par zone et par chauffeur (Nadia : zone nord, Karim : zone sud) et montre-la.",
+          "Après accord, écris le chauffeur sur chaque ligne :\n" + dcall("table.write", { table: "exploitation/livraisons", rows: [{ key: "<colis>", set: { chauffeur: "<prénom>", statut: "planifiée" } }] }),
+          "Puis poste le plan :\n" + dcall("slack.post_message", { channel: "#tournees", text: "<plan>" }),
+        ],
         "Pas plus de 40 arrêts par tournée."
       ),
       triggers: ["planifie les tournées de demain", "organise les livraisons de demain", "prépare le plan de tournée", "répartis les colis entre les chauffeurs"],
@@ -591,7 +647,12 @@ const DELTA = {
       summary: "Déclare un retard, un colis perdu ou endommagé, et prépare le message au client après accord.",
       sections: procedure(
         "Quand une livraison est en retard, perdue ou endommagée.",
-        [ANNOUNCE, "Prépare le message au client :\n" + dcall("mail.create_draft", { to: "<email>", subject: "Votre livraison", body: "<message>" }), "Montre-le et demande l'accord avant envoi."],
+        [
+          ANNOUNCE,
+          "Retrouve le colis et l'email du client :\n" + dcall("table.rows", { table: "exploitation/livraisons", filter: { client: "<client>" } }),
+          "Prépare le message au client :\n" + dcall("mail.create_draft", { to: "<email>", subject: "Votre livraison", body: "<message>" }),
+          "Montre-le et demande l'accord avant envoi.",
+        ],
         "Ne jamais promettre une heure de livraison."
       ),
       triggers: ["signale un retard de livraison", "un colis est perdu", "déclare un incident de livraison", "préviens le client d'un retard"],

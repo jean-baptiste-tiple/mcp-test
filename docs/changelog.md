@@ -11,6 +11,13 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-09-23] — Données proto : tableau de livraisons Delta
+**Quoi :** `exploitation/livraisons` (8 colis, zones nord / sud, chauffeur, statut à planifier / planifiée / livrée / incident) ; `planifier_tournee` lit la file par `table.rows`, écrit le chauffeur par `table.write` puis poste sur Slack ; `incident_livraison` retrouve l'email du client dans le tableau. Pointeur « livraisons du jour » dans les sujets de Delta.
+**Pourquoi :** mesuré sur Claude Code (results-proto.md, D6) : sans données, les trois modèles enchaînaient jusqu'à 11 `find` avant de signaler le manque par `feedback` ; la campagne web (S07) doit mesurer le routage, pas ce trou.
+**Écarté :** laisser la procédure sans données et documenter la friction (elle aurait masqué la mesure de D6 et I4 sur claude.ai et ChatGPT).
+**Fichiers :**
+- `scripts/lib/proto-data.mjs`
+
 ## [2026-09-23] — E04-S06 Campagne Claude Code headless
 **Quoi :** ~90 runs `claude -p` (Opus 5.5, Sonnet 5, Fable 5.1) avec Acme et Delta branchés ensemble : golden queries, négatifs, paires entre clients, mesures 1 à 7, rapports de frictions ; `docs/bench/results-proto.md` (grille, preuves 9 à 11, mesures, frictions recoupées au journal, changements proposés aux deux docs d'architecture). Correction de données : l'étape 5 de `ventes/qualifier_prospects` citait l'état « en cours », réservé à `table.claim`.
 **Pourquoi :** preuves sur host de l'epic E04 ; la campagne web (S07) se fait avec JB.
