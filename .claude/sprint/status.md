@@ -24,8 +24,8 @@
 | E04-S03 | read et write | ✅ Done (2026-09-23) | Opus |
 | E04-S04 | call : catalogue, tableaux, connecteurs simulés, droits, confirmation, sondes | ✅ Done (2026-09-23) | Opus |
 | E04-S05 | Prompts suggérés, variantes de mesure, golden queries proto | ✅ Done (2026-09-23) | Opus |
-| E04-S06 | Campagne Claude Code headless | 🟢 Ready | Opus |
-| E04-S07 | Campagne claude.ai et ChatGPT, restitution | 🟢 Ready | Opus + JB (comptes) |
+| E04-S06 | Campagne Claude Code headless | ✅ Done (2026-09-23) | Fable |
+| E04-S07 | Campagne claude.ai et ChatGPT, restitution | ✅ Done (2026-09-23) | Fable + JB (comptes) |
 
 ### Branche `e03-oauth` — E03 en parallèle d'E04 (worktree `C:\apps\mcp-test-e03`, session Fable, cadrage 2026-09-23)
 

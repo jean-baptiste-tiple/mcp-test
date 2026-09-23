@@ -54,4 +54,18 @@ Les hosts web se pilotent par le navigateur (Playwright MCP, sessions de JB) com
 
 ## Post-implémentation
 
+Jouée le 2026-09-23 (14:45–16:30, heure de Paris) par Fable (pilote) sur le navigateur de JB (Playwright MCP) : claude.ai Opus 5.5 (+ Sonnet 5 en témoin) et ChatGPT (compte Free, modèle par défaut). Résultats, mesures, frictions et changements proposés dans `docs/bench/results-proto.md`. Deux corrections serveur écrites par un agent Opus à partir des mesures (`find` sans `type` cherche aussi les fonctions ; refus « context has changed » qui dit de rappeler context avec la même demande puis de rejouer l'appel), 218 tests.
+
+### Écarts
+- ChatGPT « défaut et raisonnement » : le compte de JB est Free, un seul modèle, raisonnement automatique (« Réfléchi pendant N s ») ; pas de second mode joué.
+- Mesures 3 et 4 sur ChatGPT : les prompts de mesure (« code [C:proto:…] », « 8 000 caractères… probe.echo ») sont bloqués par les contrôles de sécurité d'OpenAI avant tout appel ; la mesure 3 a passé avec une formulation neutre (10 000 → 200 000 lus en entier), la mesure 4 n'a pas pu être jouée sur ChatGPT.
+- Mesure 6 jouée sur claude.ai seulement (ChatGPT n'appelle que les apps activées, pas de concurrence entre connecteurs) ; D4 et I4 non rejoués sur le web (pas de dépendance host).
+- Second modèle claude.ai limité à D1 (Sonnet 5, sans phrase) : même comportement qu'Opus (question « Gmail ou ACME ? » puis procédure complète).
+- Les connecteurs de test restent sur les comptes de JB (non demandé) ; la phrase a été retirée des deux comptes pendant la campagne.
+
+### Option plus simple écartée
+Jouer la campagne web avec la phrase seulement, sans témoins : écarté, les témoins sans phrase ont inversé deux verdicts (X2, I2) et montré que la phrase coûte plus qu'elle ne rapporte hors claude.ai.
+
 ### Notes
+- Journal de campagne : `proto.journal` entre 12:47 et 14:30 UTC (Claude-User = claude.ai, openai-mcp/1.0.0 = ChatGPT) ; captures dans `.playwright-mcp/` (non versionné).
+- Données modifiées par les runs : tournées Delta passées « planifiée » (D6 ChatGPT), brouillons et envois simulés ; `pnpm proto:seed` avant toute nouvelle campagne.

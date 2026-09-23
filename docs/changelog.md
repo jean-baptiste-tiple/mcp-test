@@ -68,6 +68,29 @@
 - `docs/epics/E03-oauth-variable-de-test.md`, `docs/epics/_index.md`
 - `docs/stories/E03-S01-schema-seed-journal.md` (remplace `E03-S01-oauth-supabase.md`), `E03-S02-serveur-protege-par-hote.md`, `E03-S03-connexion-consentement.md`, `E03-S04-deploiement-reglages-protocole.md`, `E03-S05-campagne-claude-code.md`, `E03-S06-campagne-web-restitution.md`
 - `.claude/sprint/status.md`
+## [2026-09-23] — Données proto : tableau de livraisons Delta
+**Quoi :** `exploitation/livraisons` (8 colis, zones nord / sud, chauffeur, statut à planifier / planifiée / livrée / incident) ; `planifier_tournee` lit la file par `table.rows`, écrit le chauffeur par `table.write` puis poste sur Slack ; `incident_livraison` retrouve l'email du client dans le tableau. Pointeur « livraisons du jour » dans les sujets de Delta.
+**Pourquoi :** mesuré sur Claude Code (results-proto.md, D6) : sans données, les trois modèles enchaînaient jusqu'à 11 `find` avant de signaler le manque par `feedback` ; la campagne web (S07) doit mesurer le routage, pas ce trou.
+**Écarté :** laisser la procédure sans données et documenter la friction (elle aurait masqué la mesure de D6 et I4 sur claude.ai et ChatGPT).
+**Fichiers :**
+- `scripts/lib/proto-data.mjs`
+
+## [2026-09-23] — E04-S07 Campagne claude.ai et ChatGPT, restitution
+**Quoi :** golden queries, mesures 1 à 7 et rapports de frictions sur claude.ai (Opus 5.5, témoin Sonnet 5) et ChatGPT, avec puis sans la phrase dans les préférences ; `docs/bench/results-proto.md` complété (grilles web, témoins, mesure 6 avec les 11 connecteurs de JB, faits d'infrastructure, changements proposés aux deux docs d'architecture). Deux corrections serveur issues des mesures : `find` sans `type` cherche aussi les fonctions (un nom exact toujours en tête) ; le refus « context has changed » dit de rappeler context avec la même demande puis de rejouer l'appel. `mcp-patterns.md` §8 nuancé (ChatGPT appelle une app activée sans `@nom`).
+**Pourquoi :** preuves 9 à 12 de l'epic E04 sur les hosts web ; la phrase générique nomme un client et bloque les questions de données, le refus de ctx faisait perdre la procédure sur les deux hosts, `find "probe.payload"` répondait « No match ».
+**Problèmes :** contrôles de sécurité d'OpenAI (4 appels bloqués avant d'atteindre le serveur, dont deux prompts de mesure) ; les hosts web ne relistent jamais les outils sans geste ; claude.ai classe `context` en outil d'écriture faute d'annotation.
+**Écarté :** ne chercher les fonctions que quand aucun nœud ne matche (plus court, mais une fonction resterait cachée dès qu'un nœud faible atteint le seuil d'affichage) ; jouer la campagne avec la phrase seulement, sans témoins.
+**Fichiers :**
+- `docs/bench/results-proto.md`, `docs/stories/E04-S07-campagne-web-restitution.md`, `.claude/sprint/status.md`, `.claude/conventions/mcp-patterns.md`, `docs/architecture.md`, `docs/prd.md`
+- `src/proto/services/find.ts`, `src/proto/services/ctx.ts`, `tests/integration/proto-routing.test.ts`, `tests/integration/proto-core.test.ts`, `tests/integration/proto-read-write.test.ts`
+
+## [2026-09-23] — E04-S06 Campagne Claude Code headless
+**Quoi :** ~90 runs `claude -p` (Opus 5.5, Sonnet 5, Fable 5.1) avec Acme et Delta branchés ensemble : golden queries, négatifs, paires entre clients, mesures 1 à 7, rapports de frictions ; `docs/bench/results-proto.md` (grille, preuves 9 à 11, mesures, frictions recoupées au journal, changements proposés aux deux docs d'architecture). Correction de données : l'étape 5 de `ventes/qualifier_prospects` citait l'état « en cours », réservé à `table.claim`.
+**Pourquoi :** preuves sur host de l'epic E04 ; la campagne web (S07) se fait avec JB.
+**Problèmes :** CLI 2.1.263 refusait Opus 5.5 (mis à jour en 2.1.280) ; Claude Code coupe les résultats au-delà de ~50 000 caractères en les rangeant dans un fichier ; Delta sans table de livraisons (D6) et état « en cours » (D4) ont produit 4 tickets feedback, utiles.
+**Écarté :** jouer les prompts à la main en session interactive (90 runs, trois modèles).
+**Fichiers :**
+- `docs/bench/results-proto.md` (nouveau), `scripts/lib/proto-data.mjs`, `docs/stories/E04-S06-campagne-claude-code.md`, `.claude/sprint/status.md`
 
 ## [2026-09-23] — E04-S05 Prompts suggérés, bascules de mesure, golden queries proto
 **Quoi :** capacité `prompts` du serveur proto (un prompt par procédure suggérée et lisible, message = première phrase déclencheuse, journalisés) ; `pnpm proto:set` (domaines de la description de context, version des règles, ton d'un utilisateur) ; `docs/proto-golden-queries.md` ; section 8 de `docs/bench/protocol.md` (pré-requis, requêtes R1–R6 sur `proto.journal`, déroulé des sept mesures).

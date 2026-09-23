@@ -297,7 +297,7 @@ sequenceDiagram
 |----|------------|----------|----------|--------|
 | FR-PROTO-01 | Endpoint `/api/proto/u/<utilisateur>/mcp`, stateless, identité = segment d'URL (ADR-003) ; le serveur du banc reste intact | Must | N/A | 🔶 |
 | FR-PROTO-02 | Exactement six outils `<préfixe>_context`, `_find`, `_read`, `_call`, `_write`, `_feedback` ; préfixe = celui de l'organisation de l'utilisateur (`acme`, `delta`) ; noms ASCII ≤ 64 ; descriptions en anglais < 1 000 caractères ; première phrase des cinq outils autres que context : « Requires the ctx code from <préfixe>_context; call it first. » ; schémas plats | Must | N/A | 🔶 |
-| FR-PROTO-03 | `ctx` requis sur tout outil sauf context ; code absent ou inconnu : refus qui dit d'appeler context ; version des règles changée : « context has changed, call <préfixe>_context again » | Must | N/A | 🔶 |
+| FR-PROTO-03 | `ctx` requis sur tout outil sauf context ; code absent ou inconnu : refus qui dit d'appeler context ; version des règles changée : « context has changed: call <préfixe>_context again with the same request, then retry this call. » | Must | N/A | 🔶 |
 | FR-PROTO-04 | `context(phrase?)` crée le code ctx et renvoie les blocs par priorité (code et candidats, étapes, personne, organisation, équipe, nouveautés, procédures utiles, documents récents, pointeurs par sujet) dans 20 000 caractères, coupés par la fin | Must | N/A | 🔶 |
 | FR-PROTO-05 | Routage lexical sans embedding : plein texte Postgres (français, unaccent) et pg_trgm sur phrases déclencheuses, titres, résumés, vocabulaire de l'organisation, bonus équipe et usage ; score 0–1 ; étapes servies seulement au-dessus du seuil avec un écart net sur le deuxième ; sinon candidats et consigne de demander | Must | N/A | 🔶 |
 | FR-PROTO-06 | `find` : trois candidats avec score (procédures, pages, tableaux, fonctions) | Must | N/A | 🔶 |
@@ -315,7 +315,7 @@ sequenceDiagram
 
 **Critères d'acceptation (preuves sans host, Vitest + InMemoryTransport) :**
 - [ ] FR-PROTO-03 : Given un outil autre que context When appelé sans ctx, avec un ctx inconnu ou le ctx d'un autre utilisateur Then `isError` avec un message qui dit d'appeler `<préfixe>_context`
-- [ ] FR-PROTO-03 : Given un ctx valide When la version des règles de l'organisation change Then l'appel suivant reçoit « context has changed, call <préfixe>_context again »
+- [ ] FR-PROTO-03 : Given un ctx valide When la version des règles de l'organisation change Then l'appel suivant reçoit « context has changed: call <préfixe>_context again with the same request, then retry this call. »
 - [ ] FR-PROTO-04 : Given un contexte complet When rendu Then ≤ 20 000 caractères ; avec un budget réduit, les blocs de fin disparaissent d'abord et le bloc code reste
 - [ ] FR-PROTO-05 : Given le jeu de phrases de test When routé Then ≥ 95 % de bonnes reconnaissances parmi les phrases au-dessus du seuil, et aucune étape d'une procédure P servie pour une phrase voisine de P
 - [ ] FR-PROTO-13 : Given chaque outil When il répond sans erreur Then `structuredContent.text === content[0].text`

@@ -137,6 +137,6 @@ describe.skipIf(!hasDb)(`serveur proto — read et write${hasDb ? "" : ` (${SKIP
     expect(published.text).toContain("The organisation's rules changed")
     const res = await other.read({ path: "guide" })
     expect(res.isError).toBe(true)
-    expect(res.text).toBe(`context has changed, call ${other.prefix}_context again`)
+    expect(res.text).toBe(`context has changed: call ${other.prefix}_context again with the same request, then retry this call.`)
   })
 })

@@ -96,7 +96,7 @@ describe.skipIf(!hasDb)(`serveur proto — socle${hasDb ? "" : ` (${SKIP_REASON}
 
     const res = await session.call("feedback", { ctx: code, type: "friction", text: "après" })
     expect(res.isError).toBe(true)
-    expect(res.text).toBe(`context has changed, call ${session.prefix}_context again`)
+    expect(res.text).toBe(`context has changed: call ${session.prefix}_context again with the same request, then retry this call.`)
 
     const fresh = await session.openContext()
     expect((await session.call("feedback", { ctx: fresh.code, type: "friction", text: "de nouveau" })).isError).toBe(false)
