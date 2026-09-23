@@ -109,6 +109,42 @@ pnpm proto:seed   # remplace les orgs acme et delta (journal compris)
 Détail : `docs/architecture.md` §9. Les tests `tests/integration/proto-*.test.ts` tournent contre
 le Supabase du banc sur des organisations jetables, et se sautent sans les clés de `.env.local`.
 
+### Serveur auth-test (E03)
+
+Troisième serveur, sans lien de code avec le banc ni le proto : il met en œuvre au plus court
+l'hypothèse « Connexion et identité » pour la prouver ou la réfuter (ADR-004). Supabase Auth est le
+serveur d'autorisation OAuth 2.1 (enregistrement dynamique) ; notre serveur est le resource server,
+servi par nom d'hôte :
+
+- `https://mcp-test-acme.vercel.app/api/auth-test/mcp` : Acme Énergies, outils `acme_whoami`, `acme_echo`
+- `https://mcp-test-e03-delta.vercel.app/api/auth-test/mcp` : Delta Logistique, `delta_whoami`, `delta_echo`
+
+Ce qui est prouvé sans host (Vitest) :
+
+- l'organisation vient de l'hôte appelé (`oauth_test.orgs.host`), jamais du jeton ; hôte inconnu : 404 ;
+- sans jeton valide (absent, signé par une autre clé, expiré, autre émetteur) : 401, et
+  `WWW-Authenticate` désigne les métadonnées de l'hôte appelé
+  (`/.well-known/oauth-protected-resource/api/auth-test/mcp`, RFC 9728, aussi à la racine) ;
+- l'appartenance est relue sous le jeton de l'utilisateur (RLS) à chaque `tools/call` : un non-membre
+  voit les outils, chaque appel est refusé ; retirer un membre refuse l'appel suivant, même jeton ;
+- chaque requête (401, 404, métadonnées, `initialize`, `tools/list`, `tools/call`) laisse une ligne
+  `oauth_test.journal` : décision, motif, résumé de claims, jamais le jeton.
+
+Les hosts (Claude Code, claude.ai, ChatGPT) ne servent qu'à ce qu'eux seuls montrent : enregistrement,
+consentement, rafraîchissement, révocation (`docs/bench/results-oauth.md`).
+
+```bash
+pnpm oauth:seed                          # organisations, comptes de JB et de son alias, appartenances
+pnpm oauth:member delta <email> remove   # retirer (add : ajouter) un membre pendant une campagne
+```
+
+Branche `e03-oauth` (worktree `C:\apps\mcp-test-e03`, préversion Vercel), fusionnée dans `main` avec
+l'accord de JB. Code : `src/auth-test/`, routes `src/app/api/auth-test/[transport]/` et
+`src/app/.well-known/oauth-protected-resource/`. Détail : `docs/architecture.md` §10,
+`docs/decisions/ADR-004-auth-assistants-supabase-oauth.md`. Tests : `tests/unit/auth-test-*.test.ts`
+(sans réseau) et `tests/integration/auth-test-*.test.ts` (Supabase du banc, organisations et comptes
+jetables, sautés sans les clés).
+
 ## Le canal MCP en bref
 
 Les invariants que le template impose (détail dans `.claude/conventions/mcp-patterns.md`) :

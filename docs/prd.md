@@ -15,8 +15,9 @@ Le banc reste en place et se rejoue à chaque évolution notable d'un host ; les
 
 | Persona | Rôle | Objectif principal | Parcours clés |
 |---------|------|-------------------|---------------|
-| JB | Auteur Tiple Method, testeur | Mesurer et restituer | 4.1, 4.2, 4.4 |
+| JB | Auteur Tiple Method, testeur | Mesurer et restituer | 4.1, 4.2, 4.4, 4.6 |
 | Agent hôte | Modèle du host connecté au serveur | Découvrir tools et readme | 4.2, 4.3 |
+| Second utilisateur | Alias de JB, membre d'Acme seulement | Prouver le refus d'un non-membre | 4.6 |
 
 ## 3. Design System (résumé)
 
@@ -336,6 +337,85 @@ sequenceDiagram
 | NFR-PROTO-02 | Latence | context avec routage | < 1,5 s p50 sur Vercel | N/A | 🔶 |
 | NFR-PROTO-03 | Traçabilité | Chaque chiffre de results-proto.md cite la requête du journal qui le produit | 100 % | N/A | 🔶 |
 
+### 4.6 Connecter un assistant par OAuth 🔶 Draft (E03, 2026-09-23)
+
+**Personas :** JB (membre d'Acme et de Delta), second utilisateur (alias de JB, membre d'Acme seulement), Agent hôte
+**Objectif :** Prouver ou réfuter, sans host puis sur Claude Code, claude.ai et ChatGPT, que Supabase en serveur d'autorisation OAuth 2.1 avec enregistrement dynamique suffit pour un serveur MCP servi sur un sous-domaine par client, l'organisation venant de l'adresse et l'appartenance étant revérifiée à chaque appel (ADR-004).
+
+#### Flow
+
+```mermaid
+sequenceDiagram
+    participant H as Host (Claude Code, claude.ai, ChatGPT)
+    participant R as https://acme…/api/auth-test/mcp
+    participant S as Supabase Auth (serveur d'autorisation)
+    participant C as /oauth/consent (adresse de site)
+    H->>R: initialize sans jeton
+    R-->>H: 401, WWW-Authenticate resource_metadata=https://acme…/.well-known/oauth-protected-resource/api/auth-test/mcp
+    H->>R: GET métadonnées de l'hôte
+    R-->>H: resource = https://acme…/api/auth-test/mcp, authorization_servers = [Supabase]
+    H->>S: métadonnées, enregistrement dynamique (nom, redirect_uri)
+    H->>S: /oauth/authorize (PKCE, scope, resource ?)
+    S->>C: redirection avec authorization_id
+    C->>C: connexion (email, mot de passe), détails du client, Autoriser
+    C-->>H: redirect_uri?code=…
+    H->>S: /oauth/token → jeton d'accès (JWT), refresh token
+    H->>R: initialize, tools/list, tools/call acme_whoami (Bearer)
+    R->>S: JWKS (signature, iss, exp)
+    R->>R: organisation = hôte ; membre ? (RLS sous le jeton)
+    R-->>H: personne, organisation, appartenance, résumé du jeton
+```
+
+#### Écrans
+
+| Écran | Référence UI | Description |
+|-------|-------------|-------------|
+| `/login` | Description : page de connexion du starter supabase-auth, email et mot de passe seulement, retour vers la page demandée | Connexion avant consentement |
+| `/oauth/consent` | Description : nom, site et logo du client, adresse de retour, scopes, compte connecté, boutons Autoriser / Refuser ; en-tête à la marque de l'organisation déduite de l'hôte quand il en a une | Consentement du serveur OAuth de Supabase |
+| `/auth-test/grants` | Description : liste des clients autorisés par l'utilisateur connecté (nom, scopes, date) avec un bouton Révoquer ; déconnexion | Ce que les hosts ont enregistré ; révocation côté utilisateur |
+| Journal | N/A (SQL) | `oauth_test.journal`, `auth.oauth_clients`, `auth.sessions` |
+
+#### Exigences fonctionnelles
+
+| ID | Description | Priorité | Référence UI | Statut |
+|----|------------|----------|----------|--------|
+| FR-AUTH-01 | Endpoint `/api/auth-test/mcp` servi sur deux noms d'hôte rattachés au déploiement ; organisation et préfixe des outils (`acme_`, `delta_`) déduits du nom d'hôte (table `oauth_test.orgs`) ; hôte inconnu : 404 sans donnée ; `/api/mcp` et `/api/proto/*` intacts | Must | N/A | 🔶 |
+| FR-AUTH-02 | Par nom d'hôte, `/.well-known/oauth-protected-resource` (racine et variante suffixée du chemin de la ressource, RFC 9728) : `resource` = URL canonique du serveur sur cet hôte, `authorization_servers` = serveur OAuth du Supabase du banc, `scopes_supported` ; 404 sur un hôte inconnu ; lectures journalisées | Must | N/A | 🔶 |
+| FR-AUTH-03 | Sans jeton, jeton invalide, expiré ou signé par une autre clé : 401 et `WWW-Authenticate` dont `resource_metadata` pointe vers les métadonnées de l'hôte appelé ; jamais de mode anonyme | Must | N/A | 🔶 |
+| FR-AUTH-04 | Jeton vérifié à chaque requête par la JWKS du projet Supabase (signature, `iss`, `exp`) ; le résumé de ses champs (`sub`, `email`, `aud`, `client_id`, `session_id`, `iat`, `exp`, `amr`) est journalisé et rendu par `whoami` ; le jeton lui-même n'est jamais journalisé | Must | N/A | 🔶 |
+| FR-AUTH-05 | À chaque `tools/call`, appartenance de la personne à l'organisation de l'hôte relue en base sous le jeton de l'utilisateur (RLS) ; non-membre : refus `isError` qui nomme l'organisation et ne rend aucune autre donnée ; retirer un membre fait refuser l'appel suivant, jeton encore valide ; `tools/list` reste servi à tout jeton valide | Must | N/A | 🔶 |
+| FR-AUTH-06 | Deux outils par organisation : `<préfixe>_whoami` (personne, organisation de l'hôte, appartenance, résumé du jeton, `note` optionnelle de session) et `<préfixe>_echo` ; même texte en `content` et en `structuredContent` | Must | N/A | 🔶 |
+| FR-AUTH-07 | Journal `oauth_test.journal` de chaque requête : hôte, ressource, méthode, outil, `client_id` et `client_name`, utilisateur, organisation, décision (`unauthenticated`, `invalid_token`, `unknown_host`, `allowed`, `denied_not_member`, `metadata`, `consent`), motif, résumé du jeton, user-agent ; les consentements (client, adresse de retour, scopes, décision) sont journalisés par la page de consentement | Must | N/A | 🔶 |
+| FR-AUTH-08 | Pages `/login` (email et mot de passe, retour vers la page demandée si relative), `/oauth/consent` (`getAuthorizationDetails`, Autoriser / Refuser, redirection si déjà consenti, marque de l'organisation de l'hôte), `/auth-test/grants` (liste et révocation des clients autorisés), déconnexion ; middleware limité à ces pages | Must | N/A | 🔶 |
+| FR-AUTH-09 | Seed rejouable : organisations `acme` et `delta` avec leur hôte, utilisateurs créés s'ils manquent (mot de passe lu dans `.env.local`, jamais affiché), JB membre des deux, alias membre d'Acme seulement ; script d'ajout / retrait d'un membre | Must | N/A | 🔶 |
+| FR-AUTH-10 | Déploiement de préversion de la branche `e03-oauth` sur deux domaines `*.vercel.app` rattachés à la branche, exception de protection pour ces domaines, variables d'environnement de préversion ; réglages Supabase (adresse de site, durée des jetons) annoncés à JB avant tout changement | Must | N/A | 🔶 |
+| FR-AUTH-11 | Campagne : parcours complet, connecteurs Acme et Delta côte à côte, second utilisateur sur Delta, expiration et refresh token révoqué, relevé de ce que chaque host envoie, relecture des outils à la reconnexion ; `docs/bench/protocol.md` §9, `docs/bench/results-oauth.md`, verdict ADR-004, changements proposés à la section « Connexion et identité » | Must | N/A | 🔶 |
+| FR-AUTH-12 | Apps mobiles Claude et ChatGPT : le connecteur fonctionne-t-il | Could | N/A | 🔶 |
+
+**Critères d'acceptation (preuves sans host, Vitest) :**
+- [ ] FR-AUTH-03 : Given l'hôte Acme When `POST /api/auth-test/mcp` sans jeton, avec un jeton signé par une autre clé, ou expiré Then 401 et `WWW-Authenticate` contient `resource_metadata="https://<hôte Acme>/.well-known/oauth-protected-resource/api/auth-test/mcp"` ; même chose pour Delta avec son hôte
+- [ ] FR-AUTH-02 : Given chaque hôte When `GET /.well-known/oauth-protected-resource` et sa variante suffixée Then `resource` est l'URL du serveur sur cet hôte et `authorization_servers` le Supabase du banc ; hôte inconnu : 404
+- [ ] FR-AUTH-05 : Given un jeton valide d'un membre When `whoami` Then organisation et préfixe de l'hôte ; Given un non-membre Then `isError` qui nomme l'organisation et aucune autre donnée ; Given un membre retiré Then l'appel suivant est refusé avec le même jeton
+- [ ] FR-AUTH-05 : Given le jeton d'un utilisateur When il lit `oauth_test.members` Then il ne voit que ses lignes (RLS)
+- [ ] FR-AUTH-06 : Given chaque outil When il répond sans erreur Then `structuredContent.text === content[0].text`
+- [ ] FR-AUTH-01 : Given `/api/mcp` et `/api/proto/u/jb/mcp` Then inchangés (`pnpm mcp:smoke`, tests proto)
+
+**Critères d'acceptation (hosts) :**
+- [ ] Parcours complet sur Claude Code, claude.ai et ChatGPT (Claude Desktop si JB le fait) : découverte, enregistrement dynamique, connexion, consentement, outils listés, appel réussi ; chaque étape datée au journal, ou l'échec nommé avec sa cause
+- [ ] Acme et Delta côte à côte dans le même host : deux enregistrements (`auth.oauth_clients`), chaque `whoami` rend sa propre organisation, aucun mélange
+- [ ] Second utilisateur sur Delta : connexion et consentement passent, `tools/list` servi, `whoami` refusé avec un message qui nomme Delta
+- [ ] Jeton court : le host rafraîchit seul ou non ; refresh token révoqué : comportement de chaque host
+- [ ] Relevé par host : nom du client, adresse de retour, scopes, `aud` et `client_id` du jeton, présence ou absence du paramètre `resource` ; ce que la page de consentement sait du client
+- [ ] Reconnexion : `initialize`, `tools/list` ou métadonnées relus ou non, par host
+
+#### Exigences non-fonctionnelles
+
+| ID | Catégorie | Description | Cible | Référence UI | Statut |
+|----|-----------|------------|-------|----------|--------|
+| NFR-AUTH-01 | Sécurité | Aucun jeton, secret, mot de passe ni lien magique dans le journal, les tests, les docs ou la conversation ; résumé de claims seulement | 0 fuite | N/A | 🔶 |
+| NFR-AUTH-02 | Isolation | Rien de E03 ne touche `/api/mcp`, `/api/proto/*`, `src/proto/`, `src/mcp/` ni les tables `bench_*` et `proto.*` | 0 fichier partagé modifié hors `package.json`, `admin.ts`, docs | N/A | 🔶 |
+| NFR-AUTH-03 | Traçabilité | Chaque fait de `results-oauth.md` cite la requête SQL ou la ligne de journal qui le produit | 100 % | N/A | 🔶 |
+
 ## 5. Modèle de données (résumé)
 
 ```mermaid
@@ -390,6 +470,7 @@ erDiagram
 | bench_tools | 4.1, 4.2, 4.3 | Variables de niveau tool ; les sondes sont des lignes avec un `handler` |
 | bench_events | 4.2, 4.3, 4.4 | Mesure : une ligne par requête JSON-RPC |
 | schéma `proto` (13 tables) | 4.5 | Maquette de la plateforme ; détail en architecture §9 |
+| schéma `oauth_test` (3 tables) | 4.6 | Serveur auth-test ; détail en architecture §10 |
 
 ## 6. Epics
 
@@ -397,7 +478,7 @@ erDiagram
 |----|-------|----------|----------|-------------|--------|
 | E01 | Banc MCP stateless | 4.1, 4.2, 4.3, 4.4 | P0 | — | 🟢 |
 | E02 | Push listChanged (transport stateful) | 4.1 | P1 | E01 | ⬜ |
-| E03 | OAuth Supabase comme variable de test | 4.2 | P2 | E01 | ⬜ |
+| E03 | Authentification des assistants : OAuth 2.1 avec Supabase | 4.6 | P1 | E01 | 🟢 |
 | E04 | Maquette de la plateforme MCP d'entreprise | 4.5 | P0 | E01 | 🟢 |
 
 ## 7. Hors scope

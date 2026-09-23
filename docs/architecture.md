@@ -212,7 +212,7 @@ N/A.
 
 ### Auth MCP
 
-Phase 1 : aucune (ADR-002). Phase 3 (E03) : Supabase OAuth 2.1 Server, `/.well-known/oauth-protected-resource`, page `/oauth/consent`.
+Phase 1 : aucune (ADR-002) ; `/api/mcp` reste public. E03 : serveur auth-test séparé, protégé par OAuth 2.1 avec Supabase (§10, ADR-004).
 
 ## 7. Auth & Sécurité
 
@@ -230,7 +230,8 @@ Phase 1 : aucune (ADR-002). Phase 3 (E03) : Supabase OAuth 2.1 Server, `/.well-k
 - **Supabase :** Cloud, projet `nwdmkehnxvqyxddgogtu`, région par défaut.
 - **CI/CD :** GitHub Actions `pnpm build` uniquement (existant). Migrations poussées en local (`pnpm db:push`), pas de workflow migrations (écarté : rien ne casse sans lui aujourd'hui).
 - **Environnements :** local (`.env.local`) et production. Pas de staging.
-- **Variables Vercel (production) :** `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET` (S03). `NEXT_PUBLIC_SITE_URL` et `MCP_RESOURCE_URL` ne sont lues par aucun code en phase 1 : elles reviennent avec E03 (RFC 9728).
+- **Variables Vercel (production) :** `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET` (S03). `NEXT_PUBLIC_SITE_URL` et `MCP_RESOURCE_URL` ne sont lues par aucun code en phase 1 : E03 ne les lit pas non plus : tout se déduit de l'hôte appelé (§10).
+- **Préversion E03 :** branche `e03-oauth`, deux domaines `*.vercel.app` rattachés à la branche, exception de protection, variables de préversion (§10.8).
 
 ## 9. Serveur proto — maquette de la plateforme (E04)
 
@@ -345,6 +346,101 @@ Les services parlent au vrai Postgres (plein texte, trigrammes, cascades) : les 
 
 Endpoint public sans authentification (ADR-003) ; données fictives uniquement. Arguments d'un appel plafonnés à 1 Mo (mesure 4), `probe.payload` à 200 000 caractères (mesure 3), `args` journalisés tronqués à 2 ko. Aucune fonction n'accepte un secret.
 
+## 10. Serveur auth-test — authentification des assistants (E03)
+
+Troisième serveur MCP du dépôt, sans lien de code avec le banc ni avec le proto : il met en œuvre au plus court l'hypothèse « Connexion et identité » du [doc technique](https://claude.ai/artifact/Dumt9aN5erv1eGtiPq14ZK) pour la prouver ou la réfuter (ADR-004). Le banc (`/api/mcp`) et le proto (`/api/proto/*`) restent intacts.
+
+### 10.1 Vue d'ensemble
+
+```mermaid
+graph TB
+    H[Claude Code, claude.ai, ChatGPT] -->|https://mcp-test-acme…/api/auth-test/mcp| R[Route : organisation = hôte]
+    H -->|https://mcp-test-e03-delta…/api/auth-test/mcp| R
+    H -->|/.well-known/oauth-protected-resource| M[Métadonnées RFC 9728 par hôte]
+    R --> T[Jeton : JWKS Supabase, iss, exp → 401 sinon]
+    T --> A[Adaptateur MCP : whoami, echo]
+    A --> MB[Appartenance : oauth_test.members sous le jeton, RLS]
+    A --> J[Journal : after → oauth_test.journal, clé secrète]
+    H -->|OAuth 2.1, enregistrement dynamique| S[Supabase Auth : serveur d'autorisation]
+    S -->|authorization_id| C[/oauth/consent sur l'adresse de site/]
+    C --> S
+    SEED[scripts/oauth-seed.mjs] --> DB[(Supabase du banc, schéma oauth_test)]
+    MB --> DB
+    J --> DB
+```
+
+### 10.2 Structure
+
+```
+src/app/api/auth-test/[transport]/route.ts                        # POST : hôte → organisation (404), withMcpAuth (401 + WWW-Authenticate de l'hôte), handler par requête, journal ; GET/DELETE 405
+src/app/.well-known/oauth-protected-resource/[[...path]]/route.ts # métadonnées RFC 9728 par hôte, racine et variante suffixée ; 404 hôte inconnu
+src/app/(auth)/layout.tsx, login/page.tsx, login-form.tsx         # starter supabase-auth, connexion seulement
+src/app/(auth)/oauth/consent/page.tsx, actions.ts, consent-form.tsx, consent-journal.ts  # consentement du serveur OAuth Supabase (groupe (auth) pour son layout ; URL inchangée)
+src/app/(auth)/auth-test/grants/page.tsx, actions.ts, revoke-button.tsx  # clients autorisés, révocation, déconnexion
+src/components/scope-list.tsx                                     # liste des scopes (consentement, clients autorisés)
+src/middleware.ts                                                 # session Supabase sur /login, /oauth/*, /auth-test/* seulement ; X-Frame-Options: DENY
+src/lib/supabase/server.ts                                        # starter (cookies) ; client.ts non créé : aucun composant client ne parle à Supabase
+src/lib/actions/auth.ts, src/lib/schemas/auth.ts                  # login, logout ; loginSchema, safeRedirect, loginPath, consentPath
+src/auth-test/
+├── db.ts             # OauthTestDb ; userClient(token) : clé publique + Authorization Bearer (RLS)
+├── orgs.ts           # normalizeHost, requestHost, resolveOrg (hôte → organisation), isMember (sous le jeton)
+├── token.ts          # makeVerifyToken({ jwks, issuer }) : signature, iss, exp → AuthInfo ; rejectionOf (motif au journal), authClaims, projectIssuer
+├── http.ts           # handleMcpPost, handleMcpRefused, handleMetadata : la logique, dépendances injectées (les route.ts branchent le réel)
+├── journal.ts        # JournalEntry (token = TokenSummary), summarizeClaims, claimColumns, rpcCalls, flushJournal
+└── mcp/tools.ts, server.ts   # whoami, echo par préfixe ; garde d'appartenance
+scripts/lib/oauth-data.mjs    # organisations (slug, name, prefix, host), comptes (emails), appartenances
+scripts/lib/oauth-seed.mjs    # seedOauthTest(client, { suffix }), ensureUser, setMember, deleteOauthTestOrgs
+scripts/oauth-seed.mjs        # pnpm oauth:seed
+scripts/oauth-member.mjs      # pnpm oauth:member <org> <email> add|remove
+src/types/oauth-test-database.ts
+```
+
+### 10.3 Modèle de données (schéma `oauth_test`)
+
+| Table | Colonnes clés | Rôle |
+|-------|---------------|------|
+| orgs | slug unique, name, prefix unique (`^[a-z][a-z0-9]{1,11}$`), host unique (nom d'hôte en minuscules, sans port) | Un client et l'hôte qui le sert |
+| members | org_id (cascade), user_id → `auth.users` (cascade), email (copie pour le journal et les scripts), clé primaire (org_id, user_id) ; `role` retirée le 2026-09-23 (aucun consommateur) | Appartenance, relue à chaque appel |
+| journal | ts, host, path, method, tool, decision (`unauthenticated`, `invalid_token`, `unknown_host`, `allowed`, `denied_not_member`, `metadata`, `consent`), reason, user_id, email, org_slug, client_id, client_name, token jsonb (résumé de claims), consent jsonb, user_agent, ip | Le journal fait foi |
+
+**RLS et accès** (ADR-004 §5, §6) : RLS activée sur les trois tables. `orgs` : select pour `authenticated` limité aux organisations dont l'utilisateur est membre ; `members` : select pour `authenticated` où `user_id = auth.uid()` ; `journal` : aucune policy. Écritures avec la clé secrète seulement (seed, scripts, journal, comptes de test). Schéma exposé à PostgREST par migration (`pgrst.db_schemas` = liste de `20260923090100_proto_expose.sql` + `oauth_test`).
+
+### 10.4 Cycle d'une requête MCP
+
+1. Hôte lu dans `x-forwarded-host` (sinon `host`), normalisé → `oauth_test.orgs.host`. Inconnu : 404 JSON-RPC « Unknown host ».
+2. `withMcpAuth` (mcp-handler) avec `required: true` et `resourceMetadataPath = /.well-known/oauth-protected-resource/api/auth-test/mcp` : l'origine vient des en-têtes de proxy, donc `resource_metadata` désigne l'hôte appelé. `verifyToken` : `jose` + JWKS du projet (`<NEXT_PUBLIC_SUPABASE_URL>/auth/v1/.well-known/jwks.json`, mémoïsée par process), `iss` = `<NEXT_PUBLIC_SUPABASE_URL>/auth/v1`, `exp`. Absent ou invalide : 401, corps `invalid_token`, motif au journal seulement (`missing`, `malformed`, `signature`, `expired`, `issuer`, `claims`, `error` ; `parse_error` et `http_<statut>` pour les refus du transport) ; `expiresAt` n'est pas transmis à `withMcpAuth` (il revérifierait `exp` sans tolérance, sans motif).
+3. Handler mcp-handler par requête (stateless, ADR-001) : `serverInfo` `<slug>-auth-test`, instructions d'une phrase, deux outils.
+4. `tools/call` : appartenance relue sous le jeton (`userClient(token)`, `oauth_test.members`, RLS) ; non-membre : refus qui nomme l'organisation, rien d'autre. `whoami` rend personne (claims), organisation (hôte), appartenance, résumé du jeton, requête ; `echo` rend ses arguments.
+5. `after()` : journal avec la clé secrète, une ligne par message JSON-RPC (`notifications/initialized` et `ping` en `allowed`), y compris pour les 401, 404 et les lectures de métadonnées ; une ligne 401 ou 404 ne porte aucune identité. GET et DELETE : 405 sans journal sur un hôte connu, 404 journalisé sinon. Base injoignable : 503 JSON-RPC.
+
+### 10.5 Pages
+
+- `/login` : email + mot de passe (`signInWithPassword`), `redirect` relatif seulement ; pas de signup, de reset ni de lien magique.
+- `/oauth/consent?authorization_id=…` : sans session → `/login?redirect=…` ; `getAuthorizationDetails` : déjà consenti → redirection ; sinon client (nom, uri, logo), `redirect_uri`, scopes, compte ; Autoriser → `approveAuthorization(id, { skipBrowserRedirect: true })` → `redirect(redirect_url)` ; Refuser → `denyAuthorization`. Marque de l'organisation dont l'hôte est celui de la page si elle existe (sinon « Banc MCP »). Chaque affichage et décision au journal (`consent`) ; stage `auto` (déjà consenti) : Supabase ne rend que `redirect_url`, la ligne porte alors `client: null`.
+- `/auth-test/grants` : `listGrants`, `revokeGrant({ clientId })`, déconnexion par `signOut({ scope: "local" })` (un `global` couperait les sessions des assistants).
+- Middleware : matcher `/login`, `/oauth/:path*`, `/auth-test/:path*` ; tout le reste (`/api/*`, `/.well-known/*`, `/`, `/design-system`) hors matcher.
+
+### 10.6 Tests
+
+- Unit, sans réseau : métadonnées par hôte ; 401 par hôte (jeton absent, expiré, signé par une autre clé, autre `iss`) avec une JWKS locale injectée ; résumé de claims ; garde de redirection du login ; matcher du middleware ; page de consentement avec SDK simulé.
+- Intégration, sur le Supabase du banc : organisations jetables à hôtes jetables, utilisateurs jetables créés par `auth.admin.createUser` puis supprimés, jeton réel obtenu par `signInWithPassword` (même clé de signature que le serveur OAuth) : whoami membre, refus non-membre, retrait puis refus, RLS de `members`, seed idempotent. `tests/integration/auth-test-*.test.ts`, sautés sans clés.
+- Smoke HTTP après déploiement : 401 et métadonnées sur les deux hôtes, `pnpm mcp:smoke` inchangé sur `/api/mcp`.
+
+### 10.7 Sécurité et dérogations
+
+- Aucun jeton, secret, mot de passe ni lien magique dans le journal, les tests, les docs, la conversation.
+- Clé secrète : journal, résolution de l'organisation par hôte (`orgs`, avant tout jeton), marque de la page de consentement, seed, scripts, comptes de test (ADR-002 §3) ; jamais pour lire une donnée au nom de l'utilisateur (`members` se lit sous son jeton).
+- Scopes non utilisés pour autoriser (Supabase : ils ne contrôlent que les données OIDC) ; `aud` et `client_id` relevés, pas exigés.
+- Enregistrement dynamique ouvert : ce que les hosts enregistrent et demandent se lit par les fonctions `security definer` d'`oauth_test` réservées à `service_role` (S07, le jeton de gestion Supabase étant révoqué) : `registered_clients()`, `oauth_authorizations(email?)` (dont `resource`, `scope`, `redirect_uri`), `oauth_consents(email?)`, `user_sessions(email)`, `auth_columns()` ; révocation par `revoke_user_sessions(email)` et `revoke_client_grants(email, client)` (consentements, autorisations et sessions du client, comme `revokeGrant`) ; côté utilisateur sur `/auth-test/grants`. Après révocation, l'ancien jeton d'accès reste accepté jusqu'à `exp` (mesuré le 2026-09-23).
+
+### 10.8 Déploiement
+
+- Branche `e03-oauth`, worktree `C:\apps\mcp-test-e03`, préversion Vercel. Domaines `mcp-test-acme.vercel.app` et `mcp-test-e03-delta.vercel.app` rattachés à la branche (ajoutés le 2026-09-23 ; `mcp-test-delta.vercel.app` appartient à une autre équipe). Le projet est en protection « Standard » (Vercel Authentication) : les URL de déploiement et de branche répondent 302 (mesuré le 2026-09-23), seul `mcp-test-navy.vercel.app` est public → exception de protection pour les deux domaines (réglage du projet, par JB).
+- Variables de préversion (aucune n'existe en cible Preview le 2026-09-23) : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET`, posées par JB.
+- Supabase (JB, chaque changement annoncé) : adresse de site = hôte Acme (la page de consentement y vit), URLs de redirection des deux hôtes, serveur OAuth et enregistrement dynamique (déjà actifs), comptes JB et alias par le seed, durée des jetons courte pendant la preuve 8 puis 3 600 s.
+- Migrations : `supabase db push --db-url` (jeton de la CLI révoqué), à un moment convenu avec JB.
+- Fusion dans `main` avec l'accord de JB, une fois E04 terminé.
+
 ## Invariants
 
 Ces choix ne changent JAMAIS sans ADR documenté :
@@ -357,6 +453,7 @@ Ces choix ne changent JAMAIS sans ADR documenté :
 - Tools = données en base, le code ne contient que les handlers (ADR-002) — serveur du banc seulement ; le serveur proto a ses six outils dans le code (ADR-003)
 - Serveur proto : identité = segment d'URL, aucune IA serveur, aucun embedding (ADR-003)
 - Aucun cache serveur du snapshot
+- Serveur auth-test : organisation = nom d'hôte, jamais le jeton ; appartenance relue à chaque appel ; Supabase seul serveur d'autorisation, pas de façade sans verdict contraire (ADR-004)
 
 ## Flexible
 

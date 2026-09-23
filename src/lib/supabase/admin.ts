@@ -1,5 +1,7 @@
-// Seul point d'accès aux tables du banc (ADR-002 §3) : clé secrète Supabase, RLS bypassé,
-// RLS activé sans policy sur les tables → aucun accès par clé publique.
+// Seul point d'accès aux tables du banc (ADR-002 §3) : clé secrète Supabase, RLS bypassé. Tables
+// `bench_*` et `proto` : RLS activé sans policy → aucun accès par clé publique. Schéma `oauth_test` :
+// `orgs` et `members` lisibles sous le jeton d'un utilisateur, ses lignes seulement (policies
+// `authenticated`, auth-test/db.ts userClient), rien sans jeton ; tout le reste à la clé secrète.
 // `server-only` fait échouer le build si un module client l'importe : la clé ne peut pas
 // partir dans un bundle navigateur.
 import "server-only"
@@ -7,6 +9,7 @@ import "server-only"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/database"
+import type { OauthTestDatabase } from "@/types/oauth-test-database"
 import type { ProtoDatabase } from "@/types/proto-database"
 
 // Mémoïsé : un client par process, sinon chaque appel instancie un GoTrueClient de plus.
@@ -44,4 +47,24 @@ export function getProtoClient(): SupabaseClient<ProtoDatabase, "proto"> {
     auth: { persistSession: false, autoRefreshToken: false },
   })
   return protoClient
+}
+
+// Serveur auth-test (E03, ADR-004 §6) : même clé, schéma `oauth_test`, pour ce que la RLS ne laisse pas
+// faire au nom de l'utilisateur : organisation par hôte (avant tout jeton), journal (401 et refus compris),
+// page de consentement. Jamais pour lire une donnée au nom de l'utilisateur : userClient (auth-test/db.ts).
+let oauthTestClient: SupabaseClient<OauthTestDatabase, "oauth_test"> | null = null
+
+export function getOauthTestClient(): SupabaseClient<OauthTestDatabase, "oauth_test"> {
+  if (oauthTestClient) return oauthTestClient
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const secretKey = process.env.SUPABASE_SECRET_KEY
+  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL manquante (voir .env.example)")
+  if (!secretKey) throw new Error("SUPABASE_SECRET_KEY manquante (voir .env.example)")
+
+  oauthTestClient = createClient<OauthTestDatabase, "oauth_test">(url, secretKey, {
+    db: { schema: "oauth_test" },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  return oauthTestClient
 }

@@ -88,3 +88,18 @@ Un second serveur MCP dans le banc, à côté du premier qui reste intact : `/ap
 
 ### Succès
 Les huit preuves sans host passent ; sur les trois hosts, `context` est appelé en premier, les golden queries suivent la bonne procédure en deux appels avant la première action avec accord avant tout envoi ; les sept mesures ont un chiffre ; les changements à apporter aux deux docs d'architecture sont listés.
+
+## Évolution E03 — Authentification des assistants (2026-09-23)
+
+### Problème
+La section « Connexion et identité » du [doc technique](https://claude.ai/artifact/Dumt9aN5erv1eGtiPq14ZK) repose sur une hypothèse jamais testée : Supabase, en serveur d'autorisation OAuth 2.1 avec enregistrement dynamique, suffit pour connecter Claude Code, claude.ai et ChatGPT à un serveur MCP servi sur plusieurs sous-domaines, un par client, l'organisation venant de l'adresse appelée et l'appartenance étant revérifiée à chaque appel. Si c'est faux, il faut une façade d'autorisation devant Supabase, et l'architecture change. Le banc a déjà ce qu'il faut : un projet Supabase dont le serveur OAuth publie son point d'enregistrement dynamique, un déploiement Vercel, les trois hosts branchés.
+
+### Solution
+Un troisième serveur MCP dans le banc, minimal et protégé par OAuth : `/api/auth-test/mcp`, servi sur deux noms d'hôte (Acme, Delta) rattachés à la branche `e03-oauth`, deux outils (`whoami`, `echo`), un schéma `oauth_test` (organisations, membres, journal), la page de connexion du starter et la page de consentement du serveur OAuth de Supabase. Sans host, Vitest prouve le 401 par hôte, la découverte par hôte, l'appartenance et son retrait ; sur les hosts, la campagne relève le parcours complet, les deux connecteurs côte à côte, le second utilisateur, l'expiration et la révocation, ce que chaque host envoie, la relecture des outils à la reconnexion. Le verdict tombe dans l'ADR-004 : Supabase suffit, ou il faut une façade, et pour quoi.
+
+### Scope E03
+- IN : schéma `oauth_test` et seed, organisation par nom d'hôte, métadonnées RFC 9728 par hôte, 401 `WWW-Authenticate`, jeton vérifié par la JWKS, appartenance relue à chaque appel sous le jeton (RLS), journal, outils `whoami` et `echo`, pages `/login`, `/oauth/consent`, `/auth-test/grants`, préversion sur deux domaines, protocole et campagne sur Claude Code, claude.ai et ChatGPT, `docs/bench/results-oauth.md`, verdict ADR-004, changements proposés au doc technique.
+- OUT : signup, mot de passe oublié, lien magique, hook Custom Access Token, jetons de service, connecteur admin, façade d'autorisation (objet du verdict), toute modification de `/api/mcp`, `/api/proto/*`, `src/mcp/`, `src/proto/`.
+
+### Succès
+Les preuves sans host passent ; sur chaque host, le parcours complet aboutit ou l'échec est nommé avec sa cause ; les questions 5 à 11 du cadrage ont chacune une réponse datée par host ; l'ADR-004 porte un verdict argumenté ; la liste des changements à la section « Connexion et identité » est prête.

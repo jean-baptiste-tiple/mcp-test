@@ -281,3 +281,86 @@ select f.id, f.type, f.text, f.created_at from proto.feedback f where f.created_
 | 7 | Ton servi par context | valeur du seed : `pnpm proto:set jb ton "Tutoiement, phrases courtes. Termine chaque réponse finale par la signature « — ton assistant Acme »."` | D3, I3 | la réponse finale tutoie-t-elle et porte-t-elle la signature ? |
 
 Rapport de frictions en fin de run sur chaque host (P15 adapté) : « Write a structured friction report about the Acme and Delta connectors: step by step what you did, where you hesitated or failed, what you think caused it, and a minimal reproduction for each issue. Mention anything about tool descriptions, the context result or the ctx code that was unclear, truncated or missing. » Recouper chaque fait avec R2.
+
+## 9. Serveur auth-test (E03)
+
+Authentification des assistants (ADR-004) : `https://mcp-test-acme.vercel.app/api/auth-test/mcp` (outils `acme_whoami`, `acme_echo`) et `https://mcp-test-e03-delta.vercel.app/api/auth-test/mcp` (`delta_*`), branche `e03-oauth`. Grille et résultats : `docs/bench/results-oauth.md`. Le journal fait foi : `oauth_test.journal` côté serveur MCP, les fonctions `oauth_test.*` côté serveur d'autorisation (clients enregistrés, autorisations, consentements, sessions).
+
+### 9.1 Pré-requis
+
+1. Migrations `oauth_test` et `oauth_test_admin` appliquées ; `pnpm oauth:seed` joué (Acme, Delta, comptes JB et alias, mot de passe `OAUTH_TEST_PASSWORD` de `.env.local`, jamais affiché). Le seed est additif : une appartenance ajoutée à la main survit à un nouveau seed ; `pnpm oauth:member <org> <email> add|remove` remet l'état voulu.
+2. Supabase (tableau de bord, JB) : adresse de site `https://mcp-test-acme.vercel.app` (la page de consentement y vit), URLs de redirection des deux hôtes, serveur OAuth et enregistrement dynamique actifs, durée des jetons 3 600 s (abaissée seulement pendant la preuve 8, puis remise).
+3. Vercel : préversion de `e03-oauth` déployée, domaines publics. Contrôle (POST : un GET rend 405) : `curl -i -X POST -H "content-type: application/json" -H "accept: application/json, text/event-stream" --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' https://<hôte>/api/auth-test/mcp` → 401 (pas 302) avec `WWW-Authenticate: Bearer … resource_metadata="https://<hôte>/.well-known/oauth-protected-resource/api/auth-test/mcp"` ; `curl https://<hôte>/.well-known/oauth-protected-resource/api/auth-test/mcp` → `resource` de cet hôte.
+4. Connexion de chaque host (les interfaces changent ; noter l'heure de chaque geste, elle borne le journal) :
+   - CC : `claude mcp add --transport http acme https://mcp-test-acme.vercel.app/api/auth-test/mcp` puis `claude mcp login acme` (navigateur système : connexion sur l'hôte Acme, consentement) ; idem `delta`. Headless : `claude -p --mcp-config <fichier> --strict-mcp-config` avec les mêmes noms de serveurs. `claude mcp logout <nom>` efface les jetons ; `/mcp` en session interactive : état, reconnect, re-authenticate.
+   - CW : Paramètres → Connecteurs → Ajouter un connecteur personnalisé → URL, « Se connecter maintenant » ; consentement dans la fenêtre ouverte par claude.ai ; « Actualiser la liste d'outils » pour rafraîchir ; premier message au moins 12 s après le chargement de la page.
+   - GPT : Paramètres → Connecteurs → Mode développeur → Créer → URL, authentification OAuth ; sélection par `@Acme` ou `@Delta` ; bouton « Actualiser » de la fiche ; le journal fait foi, jamais le récit du modèle.
+   - CD : partage le client claude.ai (connecteurs communs).
+5. Tag de session, premier message de chaque conversation (**P0-auth**) : « Call acme_whoami with note "<host>/<modèle>" and paste its full output verbatim. » (ou `delta_whoami`). La sortie porte la personne, l'organisation de l'hôte, l'appartenance, le résumé du jeton (`aud`, `client_id`, `session_id`, `exp`) et la requête.
+
+### 9.2 Ce que l'on peut lire
+
+- `oauth_test.journal` : `host`, `path`, `method` (`initialize`, `tools/list`, `tools/call`, `metadata` pour les lectures de `/.well-known/…`), `tool`, `decision` (`unauthenticated`, `invalid_token`, `unknown_host`, `allowed`, `denied_not_member`, `metadata`, `consent`), `reason` (`missing`, `signature`, `expired`, `issuer`…), `user_id`, `email`, `org_slug`, `client_id` (claim du jeton = `auth.oauth_clients.id`), `client_name` (clientInfo de l'`initialize`), `token` (résumé : `iss`, `aud`, `sub`, `email`, `client_id`, `session_id`, `iat`, `exp`, `amr`, `scope`), `consent` (`stage`, `client`, `redirect_uri`, `scope`), `user_agent`, `ip`. Jamais le jeton lui-même.
+- Côté serveur d'autorisation, avec la clé secrète (`pnpm oauth:admin …`, ou `select * from oauth_test.<fonction>()` dans Studio) : `registered_clients()` (`auth.oauth_clients` : id, client_name, client_uri, redirect_uris, grant_types, registration_type, client_type, token_endpoint_auth_method, created_at, deleted_at), `oauth_authorizations(email?)` (`auth.oauth_authorizations` : client_id, user_id, redirect_uri, scope, state, **resource**, code_challenge_method, status, created_at, approved_at, expires_at : c'est là que se lit le paramètre `resource` envoyé par chaque host), `oauth_consents(email?)` (user_id, client_id, scopes, granted_at, revoked_at), `user_sessions(email)` (`auth.sessions` : id, created_at, refreshed_at, not_after, user_agent, ip, oauth_client_id, scopes, compteurs de refresh tokens), `auth_columns()`.
+- Révocation : `pnpm oauth:admin revoke-grants <email> <client> --yes` (consentements, autorisations et sessions du client, comme `revokeGrant` de Supabase), `pnpm oauth:admin revoke-sessions <email> --yes` (toutes les sessions du compte), ou le bouton Révoquer de `/auth-test/grants` (côté utilisateur). Mesuré le 2026-09-23 : après révocation, le refresh token est refusé (`refresh_token_not_found`) mais l'ancien jeton d'accès reste accepté jusqu'à son `exp` par la vérification JWKS, par `getClaims` et par PostgREST ; seul `getUser` le refuse. Un host garde donc l'accès jusqu'à l'`exp` de son dernier jeton (au plus 3 600 s) ; la coupure se voit à son rafraîchissement suivant.
+
+### 9.3 Déroulé des preuves
+
+| # | Preuve | Geste | Prompt | Lecture |
+|---|--------|-------|--------|---------|
+| 5 | Parcours complet | Ajouter et connecter le connecteur Acme | P0-auth | **O2** : dans l'ordre et à l'heure, `metadata` (forme d'URL lue : racine ou suffixée), 401 `unauthenticated`, `consent` `shown` puis `approved` (client, `redirect_uri`, `scope`), `initialize` (`client_name`), `tools/list`, `tools/call` `allowed` ; **O4** : client enregistré ; **O5** : autorisation (`resource`, `scope`, `redirect_uri`) |
+| 6 | Acme et Delta côte à côte | Ajouter et connecter Delta ; une conversation qui appelle les deux | « Call acme_whoami and delta_whoami with note "<host>/<modèle>" and paste both outputs verbatim. » | **O2** par hôte : `org_slug` = celui de l'hôte, jamais l'autre ; `client_id` et `session_id` identiques ou distincts entre les deux hôtes ; **O4** : deux clients ou un seul |
+| 7 | Second utilisateur | Se déconnecter de Delta (CC : `claude mcp logout delta` ; CW, GPT : déconnecter le connecteur), se reconnecter comme l'alias (connexion sur le site avec l'alias : se déconnecter d'abord sur `/auth-test/grants`), Delta puis Acme | « Call delta_whoami with note "<host>/alias" and paste the result verbatim. » puis la même chose avec `acme_whoami` | **O3** : `denied_not_member` sur Delta, `allowed` sur Acme ; réponse du modèle ; ce que l'host montre à l'utilisateur |
+| 8a | Expiration | JB abaisse la durée des jetons à la valeur minimale acceptée ; attendre plus que cette durée ; un appel | P0-auth | **O2** : 401 `expired` puis appel `allowed` avec un nouvel `exp`, sans geste (rafraîchissement seul) ou non ; **O6** : refresh tokens ; puis retour à 3 600 s |
+| 8b | Révocation | (i) `/auth-test/grants` → Révoquer le client ; un appel ; (ii) `pnpm oauth:admin revoke-sessions <email> --yes` ; un appel après l'`exp` du jeton courant | P0-auth | **O2** : décision ; comportement de l'host (invite de reconnexion, erreur, silence) ; différence entre (i) et (ii) |
+| 9 | Relevé | Aucun (preuves 5 et 6) | | **O4** (nom, `redirect_uris`, `client_type`, `token_endpoint_auth_method`), **O5** (`resource`, `scope`, `redirect_uri`, `code_challenge_method`), **O2** (`aud`, `client_id`, `scope` du jeton), **O3** (ce que la page de consentement a vu, et sur quel hôte) |
+| 10 | Reconnexion | CC : `/mcp` reconnect puis nouvelle session ; CW : « Actualiser la liste d'outils », nouvelle conversation, puis déconnecter / reconnecter en dernier ; GPT : « Actualiser », nouvelle conversation | P0-auth | **O7** : `metadata`, `initialize`, `tools/list` par geste, avec les heures ; durée d'indisponibilité des outils (CW) |
+| 11 | Mobiles | Ajouter le connecteur dans l'app Claude et dans l'app ChatGPT | P0-auth | **O2** ; point d'échec |
+
+Rapport de frictions en fin de run sur chaque host (P15 adapté) : « Write a structured friction report about the acme and delta connectors, including the sign-in and consent steps: step by step what you did, where you hesitated or failed, what you think caused it, and a minimal reproduction for each issue. » Recouper chaque fait avec O2.
+
+### 9.4 Requêtes SQL (`oauth_test`)
+
+Remplacer `$T` par l'heure de début (UTC) de la conversation.
+
+**O1. Empreintes par hôte**
+```sql
+select host, client_name, user_agent, min(ts) as first_seen, max(ts) as last_seen, count(*) as events
+from oauth_test.journal
+group by 1, 2, 3 order by last_seen desc;
+```
+
+**O2. Chronologie d'un hôte**
+```sql
+select to_char(ts, 'HH24:MI:SS') as t, host, method, tool, decision, reason, email, org_slug, client_id,
+       token->>'session_id' as session_id, token->>'aud' as aud, token->>'exp' as exp, user_agent
+from oauth_test.journal
+where ts > '$T'
+order by ts, id;
+```
+
+**O3. Refus et consentements**
+```sql
+select to_char(ts, 'HH24:MI:SS') as t, host, decision, reason, email, org_slug, consent
+from oauth_test.journal
+where decision in ('denied_not_member', 'unauthenticated', 'invalid_token', 'unknown_host', 'consent') and ts > '$T'
+order by ts;
+```
+
+**O4. Clients enregistrés** : `select * from oauth_test.registered_clients();` ou `pnpm oauth:admin clients`.
+
+**O5. Autorisations (resource, scope)** : `select * from oauth_test.oauth_authorizations();` ou `pnpm oauth:admin authorizations [email]` ; consentements : `oauth_consents()`.
+
+**O6. Sessions d'un compte** : `select * from oauth_test.user_sessions('<email>');` ou `pnpm oauth:admin sessions <email>`.
+
+**O7. Relectures autour d'une reconnexion**
+```sql
+select to_char(ts, 'HH24:MI:SS') as t, host, method, decision, client_name, user_agent
+from oauth_test.journal
+where method in ('metadata', 'initialize', 'tools/list') and ts > '$T'
+order by ts;
+```
+
+### 9.5 Remise en état
+
+Durée des jetons à 3 600 s ; adresse de site remise ou laissée selon JB ; `pnpm oauth:member` pour les appartenances ; `pnpm oauth:admin revoke-sessions` pour les comptes de test ; connecteurs retirés des hosts si JB le demande (CC : `claude mcp remove <nom>`, qui efface aussi jetons et enregistrement).

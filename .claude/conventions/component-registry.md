@@ -1,6 +1,6 @@
 # Component Registry
 
-> Derniere MAJ : 2026-09-22 (E01-S04)
+> Derniere MAJ : 2026-09-23 (E03-S01 à S03, S07)
 > VERIFIER ce fichier AVANT de creer un composant/hook/util.
 
 ## UI Components (Shadcn/ui — installes)
@@ -55,6 +55,11 @@
 | CopyButton | `src/components/copy-button.tsx` | value, label?, size?, variant? | Copie presse-papiers + feedback 2s (client) |
 | AppLogo | `src/components/logo.tsx` | size?, label?, className? | Logo Tiple (SVG mint) — `label` = nom du produit |
 | SidebarNav | `src/components/sidebar-nav.tsx` | — (items : `src/components/nav-items.ts`) | Nav sidebar sombre, item actif pill mint (client, usePathname) |
+| ScopeList | `src/components/scope-list.tsx` | scopes | Scopes OAuth en pilules, casse d'origine, « Aucun scope » si vide — /oauth/consent et /auth-test/grants (E03-S03) |
+| LoginForm | `src/app/(auth)/login/login-form.tsx` | redirectTo? | Formulaire de /login (client) : pending, erreur inline, `redirect` en champ caché |
+| ConsentForm | `src/app/(auth)/oauth/consent/consent-form.tsx` | authorizationId | Autoriser / Refuser (client) : pending, erreur inline |
+| RevokeButton | `src/app/(auth)/auth-test/grants/revoke-button.tsx` | clientId, clientName | Révoquer un client autorisé (client) : pending, erreur sous le bouton |
+| LogoutButton | `src/app/(auth)/auth-test/grants/logout-button.tsx` | — | Bouton Déconnexion (client, `useFormStatus`) dans le `<form action={logout}>` serveur : désactivé et `aria-busy` pendant la déconnexion |
 
 ## Hooks
 
@@ -67,6 +72,10 @@
 | Action | Path | Input -> Output | Notes |
 |--------|------|-----------------|-------|
 <!-- Ajouter ici chaque Server Action creee -->
+| login | src/lib/actions/auth.ts | FormData (email, password, redirect?) -> redirect(safeRedirect) ou { error } | loginSchema, message générique sur refus, revalidatePath layout (E03-S03) |
+| logout | src/lib/actions/auth.ts | () -> redirect /login | `signOut({ scope: "local" })` : garde les sessions OAuth des assistants du compte ; utilisé par /auth-test/grants |
+| approve, deny | src/app/(auth)/oauth/consent/actions.ts | authorizationId -> redirect(redirect_url) ou { error } | Session puis authorizationIdSchema, détails relus pour le journal, `skipBrowserRedirect: true`, journal approved / denied ; relecture qui rend déjà `redirect_url` : approve journalise `auto` et redirige, deny rend un message. Exporte aussi `type Decision` (importé par ConsentForm) |
+| revoke | src/app/(auth)/auth-test/grants/actions.ts | clientId -> { data: { clientId } } ou { error } | clientIdSchema, `revokeGrant({ clientId })` puis revalidatePath(GRANTS_PATH) |
 
 ## Shared Schemas (Zod)
 
@@ -74,6 +83,9 @@
 |--------|------|-------------|-------------|
 | BenchMutateInput | src/lib/schemas/bench-mutate.ts | action (enum), name, title, description, input_schema, instructions | tool `bench_mutate` (seule mutation du banc) |
 | inputSchemas(prefix) | src/proto/schemas.ts | entrées des six outils proto (zod/v4) ; `toInputSchema`, `parseInput` | adaptateur MCP proto (validation + inputSchema servi) |
+| loginSchema | src/lib/schemas/auth.ts | email, password (≥ 8), redirect? | action `login` |
+| authorizationIdSchema | src/lib/schemas/auth.ts | `authorization_id` Supabase ([A-Za-z0-9_-], ≤ 255 : jamais de `/` dans le chemin du SDK) | page /oauth/consent, actions approve / deny |
+| clientIdSchema | src/lib/schemas/auth.ts | identifiant d'un client OAuth (UUID) | action `revoke` |
 
 ## Utils
 
@@ -83,6 +95,11 @@
 | getAdminClient | src/lib/supabase/admin.ts | Client Supabase clé secrète, `server-only`, mémoïsé, typé `Database` — SEUL accès aux tables du banc (ADR-002). Jamais depuis un Client Component |
 | byteLength, truncateToBytes | src/lib/utils/byte-size.ts | Taille UTF-8 d'un texte, troncature à N octets (plafonds d'arguments et de journal) |
 | getProtoClient | src/lib/supabase/admin.ts | Client clé secrète typé `ProtoDatabase`, schéma `proto` — serveur proto seulement (ADR-003) |
+| createClient | src/lib/supabase/server.ts | Client Supabase au nom de l'utilisateur connecté (cookies, `@supabase/ssr`) : Server Components et actions des pages d'auth (E03-S03) |
+| safeRedirect, loginPath, consentPath, DEFAULT_REDIRECT | src/lib/schemas/auth.ts | Garde du retour après connexion (chemin du site seulement, sinon /auth-test/grants) ; `/login?redirect=…` (aussi dans le middleware), `/oauth/consent?authorization_id=…` |
+| GRANTS_PATH, SITE_BRAND, UNNAMED_CLIENT | src/lib/schemas/auth.ts | Constantes uniques des pages d'auth : `/auth-test/grants` (page, action revoke, retour par défaut), « Banc MCP » (login, consentement d'un hôte sans organisation), « Client sans nom » (consentement, clients autorisés) |
+| sanitizeText | src/lib/utils/sanitize-text.ts | `(value, maxChars)` : retire NUL et surrogates isolés (refusés par Postgres), tronque à une frontière de code point — journal auth-test (`method`, `client_name`, `tool`). `src/mcp/bench/events.ts` garde sa copie (remplacement par U+FFFD) |
+| logConsent, requestInfo | src/app/(auth)/oauth/consent/consent-journal.ts | Ligne `consent` du journal auth-test (shown, approved, denied, auto ; jamais l'authorization_id ni le code) ; hôte et navigateur de la requête |
 | must, many, one | src/proto/db.ts | Lecture d'une réponse supabase-js (optionnelle, liste, ligne attendue) ; panne → `Proto store unavailable` |
 | resolveIdentity, canRead | src/proto/identity.ts | Utilisateur du segment d'URL → org, équipes (membre ou non, responsable) ; règle de lecture des nœuds |
 | requireCtx, issueCtx | src/proto/services/ctx.ts | Émission et garde du code ctx (absent, inconnu, autre utilisateur, règles changées) |
@@ -98,8 +115,20 @@
 | flushJournal, initializeEntries, loggedArgs | src/proto/services/journal.ts | Journal proto : écriture qui n'échoue jamais, client de l'initialize, arguments tronqués à 2 ko |
 | buildTools, toolKey, serverInstructions | src/proto/mcp/tools.ts | Six outils par organisation (préfixe, descriptions, inputSchema) |
 | installProto, buildServerOptions | src/proto/mcp/server.ts | Adaptateur MCP proto (handlers bas niveau, garde ctx, journal) |
-| readEnv | scripts/lib/env.mjs | `.env.local` hors Next (scripts et tests proto) ; bench-seed.mjs garde sa propre copie |
+| readEnv | scripts/lib/env.mjs | `.env.local` hors Next (scripts et tests proto et auth-test) ; bench-seed.mjs garde sa propre copie |
 | seedProto, deleteProtoOrgs, protoOrgSlugs | scripts/lib/proto-seed.mjs | Données Acme et Delta en base ; orgs jetables suffixées pour les tests |
+| getOauthTestClient | src/lib/supabase/admin.ts | Client clé secrète typé `OauthTestDatabase`, schéma `oauth_test` : journal, scripts, résolution de l'organisation par hôte, marque du consentement (ADR-004 §6) ; jamais pour lire au nom de l'utilisateur |
+| userClient, must, STORE_UNAVAILABLE | src/auth-test/db.ts | Client au jeton de l'utilisateur (clé publique + `Authorization: Bearer`, RLS) ; panne → `STORE_UNAVAILABLE` (`Auth-test store unavailable`), rendu tel quel par http.ts (503) |
+| normalizeHost, requestHost, resolveOrg, isMember | src/auth-test/orgs.ts | Hôte (`x-forwarded-host` puis `host`) → organisation (clé secrète) ; appartenance relue sous le jeton, par la seule RLS |
+| summarizeClaims, claimColumns, rpcCalls, flushJournal | src/auth-test/journal.ts | Résumé de claims (dix clés admises, jamais le jeton), colonnes d'identité d'une entrée, messages JSON-RPC d'un body, écriture qui n'échoue jamais (`{ code, message }` en console seulement) |
+| makeVerifyToken, rejectionOf, authClaims, projectIssuer | src/auth-test/token.ts | Vérification JWKS (jose, injectable pour les tests), motif de rejet réservé au journal, issuer dérivé de `NEXT_PUBLIC_SUPABASE_URL` |
+| handleMcpPost, handleMcpRefused, handleMetadata | src/auth-test/http.ts | Logique HTTP du serveur auth-test à dépendances injectées (404 hôte inconnu, `withMcpAuth`, 405, métadonnées RFC 9728) ; les `route.ts` branchent le réel |
+| buildTools, toolKey, serverInstructions, WhoamiInput, EchoInput | src/auth-test/mcp/tools.ts | `<prefix>_whoami` et `<prefix>_echo` (zod/v4, `securitySchemes` dans `_meta`) |
+| installAuthTest, buildServerOptions | src/auth-test/mcp/server.ts | Adaptateur MCP auth-test : garde d'appartenance avant tout outil, journal par message |
+| seedOauthTest, ensureUser, setMember, deleteOauthTestOrgs | scripts/lib/oauth-seed.mjs (+ .d.mts) | Acme et Delta avec leurs hôtes, comptes de test (jamais modifiés s'ils existent), appartenances ; orgs et hôtes jetables suffixés pour les tests |
+| OAUTH_ORGS, ACME_HOST, DELTA_HOST, JB_EMAIL, ALIAS_EMAIL | scripts/lib/oauth-data.mjs (+ .d.mts) | Source unique des données auth-test |
+| oauth-seed, oauth-member, oauth-admin | scripts/oauth-seed.mjs, oauth-member.mjs, oauth-admin.mjs (+ lib/oauth-admin.mjs) | `pnpm oauth:seed` ; `pnpm oauth:member <org> <email> add|remove` ; `pnpm oauth:admin columns|clients|authorizations|consents|sessions <email>|revoke-sessions <email> --yes|revoke-grants <email> <client> --yes` |
+| oauth_test.registered_clients(), oauth_authorizations(email?), oauth_consents(email?), user_sessions(email), revoke_user_sessions(email), revoke_client_grants(email, client), auth_columns() | supabase/migrations/*_oauth_test_admin*.sql | Fonctions `security definer` réservées à `service_role` : lecture des tables `auth` du serveur OAuth sans secrets (`resource`, scopes, adresses de retour, sessions), révocation (E03-S07) |
 
 ## Types partages
 
@@ -118,8 +147,12 @@
 | BenchRequestContext, outcomeFor | src/mcp/bench/context.ts | Contexte par requête (server, repo, headers, fingerprint, requestId brut, outcomes) |
 | whoamiHandler, mutateHandler, readmeHandler, echoHandler | src/mcp/bench/handlers/*.ts | Les 4 sondes ; `mutate` = seule mutation réelle |
 | MemoryBenchRepository | src/mcp/bench/repository.memory.ts | Implémentation mémoire pour les tests (extraite de `repository.ts`) |
-| isRecord | src/lib/utils/is-record.ts | Garde de type objet simple (events, levers) |
+| isRecord | src/lib/utils/is-record.ts | Garde de type objet simple (events, levers, journal auth-test) |
 | makeScenario, makeTool | tests/factories/bench.factory.ts | Fixtures scénario / tool de test |
+| ACME_ORG, DELTA_ORG, ORGS_BY_HOST, TEST_ISSUER | tests/factories/oauth-test.factory.ts | Lignes `oauth_test.orgs` tirées de `OAUTH_ORGS` (oauth-data.mjs) et émetteur des jetons de test : tests sans base du serveur auth-test (route, métadonnées, outils) |
 | PROBES, BASELINE | scripts/lib/probes.mjs | Source unique des 4 sondes et du scénario `baseline` (les migrations ne sont qu'un amorçage) |
 | buildCatalogue, canary, fillText | scripts/lib/catalogue.mjs (+ .d.mts) | Catalogue déterministe des scénarios du banc, canaris `[C:slug:field:pos:hex]` |
 | bench-seed | scripts/bench-seed.mjs | `pnpm bench:seed` : upsert idempotent des scénarios et tools, restaure `baseline`, jamais `is_active` |
+| OauthTestDatabase, OauthTest*Row | src/types/oauth-test-database.ts | Types du schéma `oauth_test` (tables et `Functions`), écrits à la main au format gen types |
+| JournalEntry, TokenSummary, RequestFacts, RpcCall | src/auth-test/journal.ts | Entrée du journal auth-test (`token` = résumé, jamais brut), faits d'une requête, message JSON-RPC |
+| seedTestOrgs, createTestUser, signIn, signInSession, anonDb, stubPublicEnv, testDb, hasDb | tests/integration/auth-test-helpers.ts | Orgs et hôtes jetables, utilisateurs jetables (`auth.admin`), jetons réels par mot de passe, client anonyme ; tests sautés sans clés |
