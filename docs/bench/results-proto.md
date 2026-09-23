@@ -8,8 +8,8 @@
 | Host | client_name (R1) | Modèles | Pilotage | Date |
 |------|------------------|---------|----------|------|
 | Claude Code headless | `claude-code@2.1.280` | Opus 5.5 (`claude-opus-5-5`), Sonnet 5 (`claude-sonnet-5`), Fable 5.1 (`claude-fable-5-1`) | `claude -p` par prompt, session neuve ; tour 2 par `--resume` ; `--tools ""` (aucun outil interne), `--strict-mcp-config` avec les deux serveurs, `--permission-mode bypassPermissions`, dossier de travail vide (ni CLAUDE.md du dépôt ni mémoire de projet) | 2026-09-23, 13:50–14:30 (heure de Paris ; le journal est en UTC) |
-| claude.ai | — | — | À jouer avec JB (S07) | — |
-| ChatGPT | — | — | À jouer avec JB (S07) | — |
+| claude.ai | `claude-ai@0.1.0` puis `Anthropic/ClaudeAI@1.0.0` (deux `initialize` par rafraîchissement, aucun entre deux ; user-agent `Claude-User`) | Opus 5.5 « Moyen » (défaut du compte Max de JB) ; témoins Sonnet 5 | Navigateur piloté (Playwright MCP) sur la session de JB, nouvelle conversation par prompt, premier message ≥ 12 s après le chargement ; connecteurs Acme et Delta ajoutés par JB ; phrase posée puis retirée par JB dans ses préférences (mesure 1) | 2026-09-23, 14:47–16:10 (heure de Paris) |
+| ChatGPT | `openai-mcp@1.0.0` (user-agent `openai-mcp/1.0.0`) | Modèle par défaut du compte **Free** de JB, raisonnement automatique (« Réfléchi pendant 18–50 s ») | Idem, connecteurs ajoutés comme apps par JB ; la phrase dans les instructions personnalisées ; `@Acme` n'a servi qu'au premier prompt, les suivants sans mention | 2026-09-23, 15:08–15:45 |
 
 Claude Code fait à chaque session `initialize`, `tools/list` **et `prompts/list`** sur chacun des deux serveurs (176 de chaque, R1). Le CLI 2.1.263 refusait Opus 5.5 (« version 2.1.280 or newer is required ») : mis à jour avant la campagne.
 
@@ -45,6 +45,32 @@ Lecture : séquence des appels vue dans le flux du run et retrouvée au journal 
 
 **Preuve 11** — Demande sans procédure (I2) : `context` (aucune étape servie) → `read` du tableau → `table.rows` avec `filter: {ville: "Valbrune"}` valide, 3/3, 0 erreur. `find` n'a pas servi : le bloc « By topic » de context pointe déjà le tableau.
 
+## Grille claude.ai et ChatGPT — golden queries (avec la phrase dans les préférences)
+
+Lecture : mêmes conventions que la grille Claude Code ; la phrase de la mesure 1 (« commence par le connecteur « Acme » : appelle son outil de contexte, puis suis la procédure qu'il renvoie. Si aucune procédure ne correspond, dis-le au lieu de deviner. ») était en place sur les deux hosts pendant ces runs. Journal : R2 entre 12:47 et 13:45 UTC.
+
+| # | claude.ai Opus 5.5 | ChatGPT | Verdict |
+|---|--------------------|---------|---------|
+| D1 relance devis | context → list_estimates → read modèle → 4 × create_draft → **demande l'accord** | context → list_estimates → **demande l'accord avant même de créer les brouillons** ; tour 2 « Oui, crée-les. » : 4 × create_draft, propose l'envoi | ✓ bonne procédure 2/2, aucun envoi ; ChatGPT ajoute un accord que la procédure ne demande pas |
+| D1 « Oui, envoie-les. » | 1 × send_draft **sans** confirm (récapitulatif servi) puis 4 × avec confirm | 3 × send_draft avec confirm directement ; le 4e **bloqué par les contrôles de sécurité d'OpenAI** (appel jamais parti, rien au journal) | ✓ `confirm: true` seulement après l'accord (R3) ; ChatGPT signale de lui-même « simulated connector » |
+| D2 réponse ticket | context → read faq → demande l'email | non joué | ✓ |
+| D3 préparer rdv | context → list_estimates → get_estimate 041 → fiche | idem (+ une recherche web sur « Valbrune », commune fictive, signalée) | ✓ 2/2, lecture seule |
+| D5 point pipeline | context → aggregate → list_estimates → synthèse, **demande avant Slack** | context → aggregate → list_estimates → synthèse (12 prospects, 5 devis, 18 500 € HT) ; l'étape Slack n'est pas proposée | ✓ 2/2, aucun `post_message` |
+| D6 tournées (Delta) | **acme_context d'abord** (« aucune procédure ») puis δcontext → δtable.rows → répartition, demande l'accord ; chaque outil Delta a exigé un clic « Toujours autoriser » | δcontext → δtable.rows → répartition, demande l'accord (aucun `acme_*`, **sans `@mention`**) | ✓ bonne procédure 2/2 ; sur claude.ai un `context` de trop (la phrase nomme Acme) |
+| D6 « Oui, valide. » | non joué | **δcontext rappelé** (avec « Oui, valide. », aucune procédure) → table.write (6 lignes) → δfind → δread table.claim → table.claim ×2 → slack.post_message ; 7 appels, 0 erreur | ✓ écritures valides ; la phrase fait rappeler `context` à chaque tour |
+| I1 devis sans réponse | context → widget de choix entre les procédures candidates | context → question (« tu parles bien des devis envoyés sans réponse depuis 7 jours ? ») | ✓ 2/2 (question admise), aucun envoi |
+| I2 prospects à Valbrune (sans procédure) | context (candidats) → **s'arrête** : « aucune procédure ne correspond » | context (candidats) → **demande laquelle utiliser** ; tour 2 « Aucune, réponds juste à la question » : read suivi_prospects → table.rows filtre ville, 3 lignes justes | ✗ 0/2 au premier tour (Claude Code 3/3) : le bloc candidats + la phrase font demander au lieu de chercher ; ChatGPT finit juste en 2 appels une fois débloqué |
+| I3 prix pré-étude | context → read grille → 1 500 € HT | context (candidat conseil/etude_autoconso) → **ne lit pas la grille**, demande de confirmer « pré-étude » et cite un tarif trouvé sur le web (« ~600 € HT », LinkedIn) | ✗ 1/2 : le pointeur « tarifs » de context est ignoré au profit de la question ; un chiffre externe est mêlé à la réponse |
+| N1 heure à Tokyo | non joué | aucun appel (recherche web) | ✓ |
+| X1 coupure sur deux sites | context → propose escalade_incident | context → propose escalade_incident, demande avant Slack | ✓ 2/2 Acme seul |
+| X2 retard de livraison | **acme_context seul** (candidats support/reponse_ticket, preparer_rdv, compte_rendu_rdv) → question, Delta jamais évoqué | idem, mot pour mot | ✗ 0/2 : la phrase capture les demandes Delta floues (Claude Code δcontext 3/3) |
+
+**Preuve 9 (web)** — avec la phrase, `<prefix>_context` est le premier appel de 100 % des conversations de travail sur les deux hosts (claude.ai 15/15, ChatGPT 9/9, R2), y compris sur des demandes méta (rapport de frictions : `acme_context` **et** `delta_context` appelés). Sans la phrase : témoins ci-dessous.
+
+**Preuve 10 (web)** — bonne procédure sur D1, D3, D5, D6, I3 ; accord demandé avant tout envoi 2/2 ; aucun `send_draft` ni `post_message` avant le tour d'accord (R3).
+
+**Preuve 11 (web)** — I2 échoue au premier tour sur les deux hosts : `context` sert trois procédures candidates avec la consigne de demander, et le modèle demande au lieu de lire le tableau. Une fois relancé, ChatGPT lit le tableau et filtre juste (2 appels, 0 erreur). Même mécanique sur I3 côté ChatGPT (question au lieu de lire la grille tarifaire pointée par context, avec un chiffre pris sur le web). Le couple « candidats + phrase « dis-le au lieu de deviner » » coûte les questions de données.
+
 ## Les sept mesures — Claude Code
 
 | # | Mesure | Résultat Claude Code | Source |
@@ -58,6 +84,20 @@ Lecture : séquence des appels vue dans le flux du run et retrouvée au journal 
 | 7 | Ton servi par context | Tutoiement et signature « — ton assistant Acme » **adoptés sur 100 % des réponses Acme** des trois modèles (I3, D1, D3, D5, M4, rapports de frictions compris) ; absents à juste titre sur Delta (profil sans signature) et sur les négatifs. Une seule consigne, dans le bloc personne, sans rappel | `analyze.mjs` sur les `final`, colonne sign |
 
 Latence (R5) : `context` p50 **694 ms**, p90 1 131 ms, max 5,9 s (75 appels) ; taille servie p50 4 946 caractères.
+
+## Les sept mesures — claude.ai et ChatGPT
+
+| # | Mesure | claude.ai (Opus 5.5) | ChatGPT | Source |
+|---|--------|----------------------|---------|--------|
+| 1 | Phrase dans les préférences | Avec : `context` premier 15/15, mais **effets de bord** : `acme_context` appelé avant `delta_context` sur D6, X2 capté par Acme (question, Delta jamais évoqué), I2 arrêté sur « aucune procédure ». Sans (témoins) : voir plus bas | Avec : `context` premier 9/9 sans `@mention`, rappelé **à chaque tour** (« Oui, valide. », rapport de frictions : Acme et Delta) ; D6 va droit à Delta, mais X2 capté par Acme et I2 arrêté comme sur claude.ai. Sans : voir plus bas | R2 |
+| 2 | Prompts suggérés | Menu « + » → Connecteurs → « Ajouter depuis ACME » liste les trois prompts par leur **titre** (« Préparer un rendez-vous client », « Répondre à un ticket client », « Relancer les devis en attente »). Un clic fait `prompts/get` (R1, 28 caractères) et attache le résultat au composer comme un **fichier TXT** (« relance_devis_text, 1 ligne »), pas comme texte du message. Liste obtenue à l'ajout du connecteur ; « Actualiser la liste d'outils » (fiche du connecteur, menu ⋮) refait `initialize` + `tools/list` + `prompts/list` (R1, 14:23), seul relisting de la campagne | Aucun affichage : ni dans le menu « + », ni dans la fiche `@Acme` ; aucun `prompts/list` au journal | R1, captures `.playwright-mcp/claude-add-from-acme.png` |
+| 3 | Taille max d'un résultat lu en entier | 25 000 et 100 000 lus en entier (dernier canari cité) ; à 200 000, claude.ai range le résultat dans un fichier que le modèle fouille par `grep` (canari trouvé par outil, pas lu) | **10 000, 25 000, 50 000, 100 000 et 200 000 lus en entier** (dernier canari cité à chaque fois : 009000, 024000, 049000, 099000, 199000), avec à chaque fois la mention non fondée « la sortie a été tronquée par l'interface ». Le prompt initial (« donne-moi le dernier code [C:proto:…] ») a été **bloqué deux fois** par les contrôles de sécurité d'OpenAI avant tout appel ; passé avec « résume ce que tu reçois » | R4 (13:02–13:06 et 13:25–13:30) |
+| 4 | Taille max d'arguments | probe.echo : **8 126, 20 681 et 46 876 caractères reçus en un appel** (même conversation, trois tours) ; ~2 min d'écriture par tranche de 20 000, « Acme call en cours d'exécution » affiché pendant ce temps | Non jouable : `acme_context` bloqué par le contrôle de sécurité sur ce prompt (« 8 000 caractères… probe.echo ») | R4 `args_chars` 13:41–13:50 |
+| 5 | Expiration du ctx | Refus « context has changed » → `acme_context` rappelé **seul** (1 appel), mais avec la question du tour 2 : plus de procédure servie → **l'appel refusé n'est pas rejoué**, le modèle répond avec ce qu'il a déjà et repose la question | Identique, mot pour mot (context rappelé à 13:32:59, `get_estimate` jamais rejoué) | R2 (13:05–13:06 et 13:31–13:33) |
+| 6 | Domaines dans la description de context | Sans la phrase, I1 face aux 10 autres connecteurs de JB : **Klymber premier** dans les deux cas (`prospect_stats`, 143 prospects sans réponse), aucun appel Acme. Sans domaines, la question de suite cite « Sellsy, Pennylane, Drive » ; avec domaines, elle cite « Gmail ou Acme Énergies ». Les domaines rendent Acme candidat, ils ne le mettent pas devant un connecteur métier réel que la mémoire de JB connaît | Non joué (une app ChatGPT n'est en concurrence avec rien : seules les apps activées sont appelées) | R2 (14:23–14:27), captures |
+| 7 | Ton servi par context | Tutoiement et signature « — ton assistant Acme » sur 100 % des réponses Acme (D1, D3, I3, mesures 4 et 5) | Idem, rapport de frictions signé compris ; absente à juste titre sur Delta | Réponses lues dans le navigateur |
+
+Trois faits d'infrastructure, hors mesures : (a) **aucun host web ne reliste les outils** — depuis le reseed, claude.ai n'a fait ni `initialize` ni `tools/list`, ChatGPT deux `initialize` (premier usage de chaque connecteur) sans `tools/list` : la liste obtenue à l'ajout du connecteur est figée jusqu'au geste de rafraîchissement (mesuré à 14:23 et 14:25 : « Actualiser la liste d'outils » refait `initialize` ×2, `tools/list`, `prompts/list`) ; (b) **les contrôles de sécurité d'OpenAI** interceptent des appels avant qu'ils partent (4 fois sur la campagne : un `send_draft`, deux `acme_context` sur les prompts de mesure « code [C:proto:…] » et « 8 000 caractères… probe.echo ») avec un message opaque (« Cet appel d'outil a été bloqué par les contrôles de sécurité d'OpenAI ») ; le modèle le dit et n'invente rien ; (c) claude.ai demande une **autorisation par outil** (« Nécessite votre intervention » → « Toujours autoriser ») la première fois que chaque outil d'un connecteur est appelé.
 
 ## Frictions (rapports P15 des trois modèles, recoupés avec le journal)
 
@@ -77,6 +117,21 @@ Latence (R5) : `context` p50 **694 ms**, p90 1 131 ms, max 5,9 s (75 appels) ; t
 
 Ce que le journal contredit ou nuance : Fable dit que « le serveur devrait rejeter un confirm sans appel préalable » ; c'est un choix, pas un défaut (voir Changements proposés). Aucun rapport n'invente un appel : les 3 déroulés collent au journal appel par appel.
 
+### Frictions des hosts web (rapports P15 de claude.ai Opus 5.5 et de ChatGPT, recoupés)
+
+| Friction | claude.ai | ChatGPT | Journal / verdict |
+|----------|-----------|---------|-------------------|
+| Outils chargés à la demande (`tool_search`), descriptions différées **tronquées** (« energy consu… ») | oui | — | Comportement de claude.ai ; la description de context tient en 1 000 caractères, c'est l'aperçu qui coupe |
+| « Le contrat ctx n'est communiqué que par le résultat de context, pas dans les descriptions des outils métier » | — | P3 | **Faux côté serveur** (chaque description commence par « Requires the ctx code from acme_context; call it first. ») : le modèle ne relit pas les descriptions au moment du rapport, ou ne les voit pas en entier |
+| Blocage opaque par les contrôles de sécurité d'OpenAI (aucune cause, aucun champ) | — | P1 | Vrai, host ; 4 blocages sur la campagne, aucun lié au serveur |
+| Statut « sent … (simulated connector: nothing left the server) » jugé ambigu → demande un statut `simulated` explicite | « mode simulé annoncé tard » | P2 | Vrai, propre à la maquette (même friction F5 / Issue 2 sur Claude Code) |
+| Conflit de style entre les préférences de JB et la consigne de ton servie par context | oui | — | Vrai : deux sources de ton ; la signature l'a emporté 100 % |
+| Confirm non imposé côté serveur ; objet d'email ≠ modèle ; brouillons sans signature | oui | — | Mêmes constats que Claude Code (F2–F4) |
+| Autorisations claude.ai par outil, peu lisibles pendant une procédure | oui | — | Vrai, host |
+| Pas de procédure générique d'audit/diagnostic | — | P4 | Hors périmètre |
+
+Les deux rapports collent au journal appel par appel ; aucun n'invente un appel. ChatGPT y ajoute de lui-même que « sent » ne veut pas dire « parti ».
+
 ## Changements proposés aux deux docs d'architecture
 
 | Doc, section | Aujourd'hui | Proposé | Mesure qui le justifie |
@@ -92,7 +147,32 @@ Ce que le journal contredit ou nuance : Fable dit que « le serveur devrait reje
 | Technique, « Le paquet », prompts suggérés | Prompts = contenu de l'organisation | Confirmé utile sur Claude Code : commande `/mcp__<serveur>__<prompt>` qui déroule la procédure ; Claude Code lit `prompts/list` à chaque session (coût nul côté modèle) | Mesure 2 |
 | Technique, « Entités », procédures | Étapes avec l'appel exact | Ajouter un **contrôle à la publication** : chaque `state`, fonction et argument cité par une étape doit exister et être accepté par le serveur (l'étape 5 de qualifier_prospects citait un état que table.release refuse) ; la maquette a produit 9 refus et 2 tickets avant correction | D4 |
 | Technique, « Sécurité et isolation », coffre / connecteurs | — | Le mode d'un connecteur (réel, sandbox, simulé) est une donnée servie par context et rappelée par le récapitulatif d'une fonction sensible | F5, Issue 2 |
+| Fonctionnel, « Routage des intentions », niveau 1 (phrase dans les préférences) | Une phrase générique qui nomme le connecteur principal | La phrase garantit `context` premier sur claude.ai et ChatGPT (100 %), mais **elle nomme un client** : elle capte les demandes d'un autre client quand elles sont floues (X2 0/2), fait appeler `acme_context` avant `delta_context` (D6 claude.ai), fait rappeler `context` à chaque tour sur ChatGPT (~5 000 caractères par tour) et, avec « dis-le au lieu de deviner », arrête le modèle sur les questions de données (I2 0/2). Proposer une phrase **sans nom de client** (« commence par l'outil de contexte du connecteur de mon entreprise concerné ») et sans la clause « dis-le », qui fait double emploi avec la consigne servie par context | Mesure 1 web |
+| Fonctionnel, « Ce que renvoie context », bloc candidats | Candidats sous le seuil avec la consigne de demander | Distinguer **question de données** et **demande d'action** : sur une question (« combien », « lesquels », « qui »), la consigne est « cherche avec find/read/table.rows et réponds », la question à l'utilisateur ne vaut que pour une action. I2 échoue 0/2 sur le web avec la consigne actuelle | Preuve 11 web |
+| Fonctionnel, « Mises à jour sans geste » | « le modèle se rafraîchit seul » (confirmé sur Claude Code) | Nuancer : sur claude.ai et ChatGPT, le modèle rappelle bien `context` seul, mais **avec la question du tour**, perd la procédure et ne rejoue pas l'appel refusé (0/2). Le refus doit dire « call context again **with the same request**, then retry this call » (fait dans la maquette) | Mesure 5 web |
+| Fonctionnel, « Les six outils », find | find cherche procédures, pages, tableaux, fonctions | Sans `type`, la maquette ne cherchait que les nœuds : `find "probe.payload"` répondait « No match » et le modèle abandonnait. Préciser que find sans type couvre **aussi les fonctions** (fait dans la maquette) | Mesure 3 ChatGPT, 100 000 |
+| Fonctionnel, « Ce que renvoie context », budget | Budget de 20 000 caractères | ChatGPT lit 200 000 caractères en entier, claude.ai 100 000 (200 000 rangé en fichier), Claude Code 45 000 : la borne utile reste **45 000** (plus petit host) ; le budget de 20 000 tient partout | Mesure 3 web |
+| Technique, « Le paquet », prompts suggérés | Prompts = contenu de l'organisation | Sur claude.ai, un prompt cliqué devient une **pièce jointe TXT** (son titre humain est ce que l'utilisateur voit) ; sur ChatGPT rien n'est affiché. Le titre et la première ligne du prompt doivent donc se suffire ; Claude Code reste le seul host où le prompt déroule la procédure | Mesure 2 web |
+| Technique, « Le paquet », descriptions | Descriptions figées, prompt caching | Les hosts web ne relistent jamais les outils sans geste de l'utilisateur (aucun `tools/list` sur la campagne) : toute évolution de description passe par le geste de rafraîchissement, à documenter dans le guide d'installation de l'utilisateur | Fait (a) |
+| Technique, « Le paquet », annotations des tools | Non mentionnées | claude.ai classe les outils par annotations : sans `readOnlyHint`, `context` est rangé dans « Outils d'écriture/suppression » avec call, write et feedback (fiche du connecteur, capture `.playwright-mcp/claude-connector-acme-detail.png`) et déclenche une autorisation à son premier appel. Poser `readOnlyHint: true` sur context, find, read et `destructiveHint: false` sur call, write, feedback ; le `title` est ce que l'utilisateur voit (« Acme Énergies: Load work context ») | Fait (c) |
+| Technique, « Sécurité et isolation », connecteurs sensibles | Récapitulatif + confirm | Sur ChatGPT, un appel peut être bloqué **avant d'arriver au serveur** par les contrôles d'OpenAI (un envoi sur quatre, deux prompts de mesure) : le journal serveur ne voit rien, le récapitulatif de la procédure doit permettre à l'utilisateur de constater ce qui est parti (ids de brouillons envoyés) | Fait (b) |
 
-## Reste à faire (S07, avec JB)
+## Témoins sans la phrase (mesure 1) et mesure 6
 
-claude.ai (deux modèles) et ChatGPT (défaut et raisonnement) : mêmes golden queries, mesures 1 (phrase dans les préférences et instructions personnalisées), 2 (affichage des prompts), 6 (domaines face aux autres connecteurs de JB), rapports de frictions. Avant : `pnpm proto:seed`, puis ajout des connecteurs Acme et Delta sur les deux comptes.
+Phrase retirée par JB des deux comptes à 16:05 (heure de Paris) ; mêmes prompts, nouvelles conversations, aucune `@mention`. Journal R2 entre 14:11 et 14:25 UTC.
+
+| # | claude.ai Opus 5.5, sans phrase | ChatGPT, sans phrase | Ce que la phrase changeait |
+|---|--------------------------------|----------------------|----------------------------|
+| D1 relance devis | **aucun appel** : `tool_search` puis widget « Relancer les devis de quelle structure ? Acme Énergies / Delta Logistique / Les deux » ; après « Acme Énergies » : context → list_estimates → read modèle → 4 × create_draft → demande l'accord | context → list_estimates → demande l'accord avant les brouillons (identique avec ou sans phrase) | claude.ai : avec la phrase, context premier sans question ; ChatGPT : rien |
+| D6 tournées (Delta) | **δcontext premier**, aucun `acme_context` → δtable.rows ×2 → « déjà planifiées », relève une anomalie, demande avant d'écrire | δcontext → δtable.rows → « rien à planifier » | claude.ai : avec la phrase, `acme_context` d'abord (un appel de trop) |
+| X2 retard de livraison | **aucun appel** : « prompt structuré » et question (quel client, quelle livraison — cite Delta Logistique et les missions de JB tirées de sa mémoire, quel canal) | **δcontext premier** (incident_livraison) → δtable.rows → « quel client ? » | avec la phrase, `acme_context` sur les deux hosts (mauvais client) ; sans, ChatGPT est juste et claude.ai ne touche pas aux connecteurs |
+| I2 prospects à Valbrune | context → read suivi_prospects → table.rows, **réponse en un tour** (3 lignes justes) | idem, en un tour | avec la phrase, arrêt « aucune procédure » (claude.ai) ou question (ChatGPT) : la clause « dis-le au lieu de deviner » bloquait les questions de données |
+| I3 prix pré-étude | non rejoué (juste avec la phrase) | context → read grille → « 1 500 € HT » | avec la phrase, question + chiffre pris sur le web |
+
+**Mesure 1, lecture** — la phrase est utile sur claude.ai pour une demande qui nomme le domaine (D1 : sans elle, le modèle demande à quel client s'adresser) et inutile sur ChatGPT (context premier 5/5 sans elle). Son coût est net sur les deux hosts : elle nomme Acme (X2, D6), et sa clause « dis-le au lieu de deviner » double la consigne du bloc candidats et bloque I2 et I3. Une phrase sans nom de client ni clause d'arrêt est à mesurer.
+
+**Sonnet 5 (claude.ai, sans phrase), D1** — aucun appel, « prompt structuré » puis widget « Où sont tes devis en attente ? Gmail / ACME / Autre » ; après « ACME » : context → list_estimates → read modèle → 4 × create_draft → « Je les envoie tous ? ». Même comportement qu'Opus ; pas de signature sur cette réponse.
+
+**Mesure 6, déroulé** — `pnpm proto:set acme domains null` à 14:21, « Actualiser la liste d'outils » sur la fiche ACME (R1 : `initialize` ×2, `tools/list`, `prompts/list` à 14:23), nouvelle conversation Opus 5.5, I1 : `tool_search` puis **Klymber** (`prospect_stats`) et **Gmail** (recherche 90 jours), aucun `acme_*`, question finale « un autre outil (Sellsy, Pennylane, Drive…) ? ». Domaines restaurés à 14:24, nouveau rafraîchissement (14:25), même I1 : **Klymber** seul, puis « de cette prospection, ou de devis/propositions envoyés par Gmail (ou via Acme Énergies) ? ». Sur un compte qui a un vrai outil de prospection et une tâche planifiée « Prospection sortante » en mémoire, les domaines dans la description ne suffisent pas à mettre Acme en premier ; ils le font au moins apparaître dans la question. La phrase (mesure 1) faisait le reste, au prix décrit plus haut.
+
+Empreinte claude.ai au rafraîchissement : deux `initialize` par geste, `client_name` `claude-ai@0.1.0` puis `Anthropic/ClaudeAI@1.0.0` (R1, 14:23 et 14:25).

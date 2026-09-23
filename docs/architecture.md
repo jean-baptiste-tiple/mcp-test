@@ -315,13 +315,13 @@ Noms = `<prefix>_<outil>` calculés par requête depuis l'organisation de l'util
 | Outil | Entrées (plates) | Rend |
 |-------|------------------|------|
 | context | `phrase?` | code ctx + blocs par priorité, ≤ 20 000 caractères |
-| find | `ctx, query, type?` (procedure, page, table, function) | 3 candidats avec score |
+| find | `ctx, query, type?` (procedure, page, table, function) | 3 candidats avec score ; sans `type`, jusqu'à 3 fonctions en plus ; un nom de fonction exact est toujours en tête (avec ou sans `type`) |
 | read | `ctx, path, section?, outline?, since_revision?, draft?` ; `path` = chemin de nœud ou nom de fonction | en-tête + contenu, plan, section, changements ; contrat d'une fonction |
 | write | `ctx, path, base_revision?, title?, summary?, kind?, ops?, triggers?, neighbors?, publish?` | révision, sections touchées, ou refus avec l'état actuel |
 | call | `ctx, function, arguments?` (objet libre), `confirm?` | résultat, ou récapitulatif à faire approuver |
 | feedback | `ctx, type, text` | numéro de ticket |
 
-**Vérification du ctx**, avant tout service : code absent ou inconnu, ou d'un autre utilisateur → « Missing or unknown ctx. Call <prefix>_context first and pass its ctx code. » ; `rules_version` différente de celle de l'organisation → « context has changed, call <prefix>_context again ».
+**Vérification du ctx**, avant tout service : code absent ou inconnu, ou d'un autre utilisateur → « Missing or unknown ctx. Call <prefix>_context first and pass its ctx code. » ; `rules_version` différente de celle de l'organisation → « context has changed: call <prefix>_context again with the same request, then retry this call. » (formulation issue de la mesure 5 sur claude.ai et ChatGPT : le modèle rappelait context avec la question du tour et ne rejouait pas l'appel).
 
 **Résultat** : `content[0].text` et `structuredContent.text` portent la même chaîne ; les erreurs sont en texte seul avec `isError`.
 

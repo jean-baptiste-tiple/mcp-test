@@ -18,6 +18,15 @@
 **Fichiers :**
 - `scripts/lib/proto-data.mjs`
 
+## [2026-09-23] — E04-S07 Campagne claude.ai et ChatGPT, restitution
+**Quoi :** golden queries, mesures 1 à 7 et rapports de frictions sur claude.ai (Opus 5.5, témoin Sonnet 5) et ChatGPT, avec puis sans la phrase dans les préférences ; `docs/bench/results-proto.md` complété (grilles web, témoins, mesure 6 avec les 11 connecteurs de JB, faits d'infrastructure, changements proposés aux deux docs d'architecture). Deux corrections serveur issues des mesures : `find` sans `type` cherche aussi les fonctions (un nom exact toujours en tête) ; le refus « context has changed » dit de rappeler context avec la même demande puis de rejouer l'appel. `mcp-patterns.md` §8 nuancé (ChatGPT appelle une app activée sans `@nom`).
+**Pourquoi :** preuves 9 à 12 de l'epic E04 sur les hosts web ; la phrase générique nomme un client et bloque les questions de données, le refus de ctx faisait perdre la procédure sur les deux hosts, `find "probe.payload"` répondait « No match ».
+**Problèmes :** contrôles de sécurité d'OpenAI (4 appels bloqués avant d'atteindre le serveur, dont deux prompts de mesure) ; les hosts web ne relistent jamais les outils sans geste ; claude.ai classe `context` en outil d'écriture faute d'annotation.
+**Écarté :** ne chercher les fonctions que quand aucun nœud ne matche (plus court, mais une fonction resterait cachée dès qu'un nœud faible atteint le seuil d'affichage) ; jouer la campagne avec la phrase seulement, sans témoins.
+**Fichiers :**
+- `docs/bench/results-proto.md`, `docs/stories/E04-S07-campagne-web-restitution.md`, `.claude/sprint/status.md`, `.claude/conventions/mcp-patterns.md`, `docs/architecture.md`, `docs/prd.md`
+- `src/proto/services/find.ts`, `src/proto/services/ctx.ts`, `tests/integration/proto-routing.test.ts`, `tests/integration/proto-core.test.ts`, `tests/integration/proto-read-write.test.ts`
+
 ## [2026-09-23] — E04-S06 Campagne Claude Code headless
 **Quoi :** ~90 runs `claude -p` (Opus 5.5, Sonnet 5, Fable 5.1) avec Acme et Delta branchés ensemble : golden queries, négatifs, paires entre clients, mesures 1 à 7, rapports de frictions ; `docs/bench/results-proto.md` (grille, preuves 9 à 11, mesures, frictions recoupées au journal, changements proposés aux deux docs d'architecture). Correction de données : l'étape 5 de `ventes/qualifier_prospects` citait l'état « en cours », réservé à `table.claim`.
 **Pourquoi :** preuves sur host de l'epic E04 ; la campagne web (S07) se fait avec JB.

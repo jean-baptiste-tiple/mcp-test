@@ -133,9 +133,32 @@ describe.skipIf(!hasDb)(`serveur proto — routage${hasDb ? "" : ` (${SKIP_REASO
     const tables = await session.call("find", { ctx: code, query: "suivi des prospects", type: "table" })
     expect(tables.text).toContain("1. ventes/suivi_prospects (table")
     const any = await session.call("find", { ctx: code, query: "relance devis" })
-    expect(any.text.match(/^\d\. /gm)!.length).toBeLessThanOrEqual(3)
+    // Sans type : trois nœuds au plus, puis trois fonctions au plus.
+    for (const block of any.text.split("\nFunctions:\n")) expect(block.match(/^\d\. /gm)!.length).toBeLessThanOrEqual(3)
     const nothing = await session.call("find", { ctx: code, query: "zzz qqq www" })
     expect(nothing.text).toContain("No match")
     for (const res of [pages, tables, any, nothing]) expect((res.result.structuredContent as { text: string }).text).toBe(res.text)
+  })
+
+  it("find : sans type, les fonctions aussi, après les nœuds ; un nom exact toujours en tête", async () => {
+    const session = await connectAs(db, orgs.seed.users.jb.slug)
+    const { code } = await session.openContext()
+    const byName = await session.call("find", { ctx: code, query: "probe.payload" })
+    expect(byName.text).toContain("1. probe.payload (read, score 1.00)")
+    expect(byName.text).toContain(`${session.prefix}_read {"path": "<function>"}`)
+    expect(byName.text).not.toContain("No match")
+    // Cinq fonctions table.* à 1.00 par les mots : sans le nom exact, table.rows sortait des trois.
+    expect((await session.call("find", { ctx: code, query: "table.rows" })).text).toContain("1. table.rows (read, score 1.00)")
+    const typed = await session.call("find", { ctx: code, query: "table.rows", type: "function" })
+    expect(typed.text).toMatch(/^Top functions for « table\.rows »:\n1\. table\.rows \(read, score 1\.00\)/)
+
+    const nodes = await session.call("find", { ctx: code, query: "relance devis" })
+    expect(nodes.text).toMatch(/^Top matches for « relance devis »:\n1\. ventes\/relance_devis \(procedure/)
+    expect(nodes.text.indexOf("\nFunctions:\n")).toBeGreaterThan(nodes.text.indexOf("ventes/relance_devis"))
+
+    const functionsOnly = await session.call("find", { ctx: code, query: "list estimates sellsy" })
+    expect(functionsOnly.text).toMatch(/^Top matches for « list estimates sellsy »:\nFunctions:\n/)
+    expect(functionsOnly.text).toMatch(/^\d\. sellsy\.list_estimates \(read, score/m)
+    expect(functionsOnly.text).not.toContain("No match")
   })
 })

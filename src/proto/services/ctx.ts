@@ -20,7 +20,7 @@ export function missingCtx(prefix: string): string {
 }
 
 export function staleCtx(prefix: string): string {
-  return `context has changed, call ${prefix}_context again`
+  return `context has changed: call ${prefix}_context again with the same request, then retry this call.`
 }
 
 function newCode(): string {
