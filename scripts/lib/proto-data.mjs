@@ -241,7 +241,7 @@ const ACME = {
           "Lis le contrat du tableau :\n" + call("table.schema", { table: "ventes/suivi_prospects" }),
           "Réserve des lignes :\n" + call("table.claim", { table: "ventes/suivi_prospects", worker: "<ton prénom>", limit: 3 }),
           "Complète chaque ligne ; un champ cherché sans résultat se déclare avec verified_empty et la raison :\n" + call("table.write", { table: "ventes/suivi_prospects", rows: [{ key: "<id>", set: { notes: "<notes>" } }] }),
-          "Libère chaque ligne en « en cours » :\n" + call("table.release", { table: "ventes/suivi_prospects", key: "<id>", worker: "<ton prénom>", state: "en cours" }),
+          "Libère chaque ligne, remise dans la file « à traiter » (l'état « en cours » n'existe que sous réservation) :\n" + call("table.release", { table: "ventes/suivi_prospects", key: "<id>", worker: "<ton prénom>", state: "à traiter" }),
         ],
         "Ne jamais inventer un contact. Ne jamais écrire null."
       ),

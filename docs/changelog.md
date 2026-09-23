@@ -11,6 +11,14 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-09-23] — E04-S06 Campagne Claude Code headless
+**Quoi :** ~90 runs `claude -p` (Opus 5.5, Sonnet 5, Fable 5.1) avec Acme et Delta branchés ensemble : golden queries, négatifs, paires entre clients, mesures 1 à 7, rapports de frictions ; `docs/bench/results-proto.md` (grille, preuves 9 à 11, mesures, frictions recoupées au journal, changements proposés aux deux docs d'architecture). Correction de données : l'étape 5 de `ventes/qualifier_prospects` citait l'état « en cours », réservé à `table.claim`.
+**Pourquoi :** preuves sur host de l'epic E04 ; la campagne web (S07) se fait avec JB.
+**Problèmes :** CLI 2.1.263 refusait Opus 5.5 (mis à jour en 2.1.280) ; Claude Code coupe les résultats au-delà de ~50 000 caractères en les rangeant dans un fichier ; Delta sans table de livraisons (D6) et état « en cours » (D4) ont produit 4 tickets feedback, utiles.
+**Écarté :** jouer les prompts à la main en session interactive (90 runs, trois modèles).
+**Fichiers :**
+- `docs/bench/results-proto.md` (nouveau), `scripts/lib/proto-data.mjs`, `docs/stories/E04-S06-campagne-claude-code.md`, `.claude/sprint/status.md`
+
 ## [2026-09-23] — E04-S05 Prompts suggérés, bascules de mesure, golden queries proto
 **Quoi :** capacité `prompts` du serveur proto (un prompt par procédure suggérée et lisible, message = première phrase déclencheuse, journalisés) ; `pnpm proto:set` (domaines de la description de context, version des règles, ton d'un utilisateur) ; `docs/proto-golden-queries.md` ; section 8 de `docs/bench/protocol.md` (pré-requis, requêtes R1–R6 sur `proto.journal`, déroulé des sept mesures).
 **Pourquoi :** mesures 2, 5, 6 et 7 du doc fonctionnel et campagnes S06-S07 rejouables.
