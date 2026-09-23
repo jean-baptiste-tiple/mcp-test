@@ -19,6 +19,12 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-09-23] — mcp-patterns : mesures des bancs E04 et E03
+**Quoi :** report dans `mcp-patterns.md` des mesures du banc E04 (serveur proto, 23/09/2026 : prompts par host, code expiré à rappeler « avec la même demande », borne de description entre plusieurs serveurs, annotations et autorisations claude.ai, `confirm` accepté après approbation du contenu, blocages OpenAI, plafond de 45 000 caractères lus en entier, données en champs dans `structuredContent`, ton suivi à 100 %, consigne des candidats question/action, geste de rafraîchissement confirmé, phrase de préférences) et du banc E03 (OAuth, 23/09 : découverte par la forme suffixée, enregistrement par host, Supabase suffit, organisation par l'adresse et appartenance à chaque appel, jeton non lié à la ressource, révocation au rafraîchissement).
+**Pourquoi :** les conventions doivent porter les faits mesurés par les deux campagnes, datés et statués, pour le template et les projets qui en dérivent.
+**Écarté :** réécrire les sections existantes ; seuls des ajouts datés et statués.
+**Fichiers :** `.claude/conventions/mcp-patterns.md`, `docs/changelog.md`
+
 ## [2026-09-23] — E03-S04 Préversion, protection Vercel, smoke HTTP
 **Quoi :** préversion de `e03-oauth` sur `mcp-test-acme.vercel.app` et `mcp-test-e03-delta.vercel.app` ; variables Preview ; Vercel Authentication désactivée sur le projet (les niveaux « Standard » et « préversions seulement » protègent aussi un domaine rattaché à une branche, mesuré) ; smoke HTTP complet consigné dans `results-oauth.md` (401 avec `WWW-Authenticate` de l'hôte appelé, métadonnées par hôte sous trois formes d'URL, consentement redirigé vers `/login`, 405 en GET, `whoami` avec de vrais jetons : JB sur Acme, alias refusé sur Delta et accepté sur Acme, `/api/mcp` intact) ; fusion de `main` (fin d'E04) dans la branche.
 **Pourquoi :** S04 ; sans préversion publique, aucun host ne peut découvrir le serveur.
