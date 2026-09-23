@@ -200,6 +200,22 @@ export type ProtoDatabase = {
     Views: { [_ in never]: never }
     Functions: {
       norm: { Args: { t: string }; Returns: string }
+      route_candidates: {
+        Args: { p_org: string; p_query: string; p_kind?: string; p_limit?: number }
+        Returns: {
+          node_id: string
+          path: string
+          title: string
+          summary: string
+          kind: string
+          team_id: string | null
+          s_trigger: number
+          s_neighbor: number
+          s_title: number
+          lexical: number
+          query_lexemes: number
+        }[]
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

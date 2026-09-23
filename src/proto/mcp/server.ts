@@ -14,6 +14,7 @@ import { inputSchemas, parseInput, type ToolInput, type ToolKey } from "../schem
 import { buildContext } from "../services/context"
 import { requireCtx } from "../services/ctx"
 import { recordFeedback } from "../services/feedback"
+import { find } from "../services/find"
 import { type JournalEntry, loggedArgs } from "../services/journal"
 import { buildTools, serverInstructions, toolKey } from "./tools"
 
@@ -49,7 +50,7 @@ function notYet(key: ToolKey): Service<ToolKey> {
 
 const SERVICES: { [K in ToolKey]: Service<K> } = {
   context: ({ db, identity, userAgent }, input) => buildContext(db, identity, input, userAgent),
-  find: notYet("find"),
+  find: ({ db, identity }, input) => find(db, identity, input),
   read: notYet("read"),
   call: notYet("call"),
   write: notYet("write"),

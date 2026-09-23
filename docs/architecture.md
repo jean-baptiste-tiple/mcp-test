@@ -265,7 +265,7 @@ src/proto/
 ├── services/
 │   ├── ctx.ts          # émettre et vérifier un code ctx
 │   ├── context.ts      # blocs par priorité, budget, rendu texte
-│   ├── routing.ts      # appel de proto.route, décision seuil + écart
+│   ├── routing.ts      # proto.route_candidates → mélange, bonus, décision seuil + écart
 │   ├── find.ts  read.ts  write.ts  call.ts  feedback.ts
 │   └── journal.ts      # entrées de journal, flush
 ├── functions/
@@ -327,7 +327,7 @@ Noms = `<prefix>_<outil>` calculés par requête depuis l'organisation de l'util
 
 **Budget de context** : blocs dans l'ordre code et candidats, étapes de la procédure reconnue, personne, organisation (sections du nœud `guide`), équipe, nouveautés, procédures utiles (60), documents récents (20), pointeurs par sujet (15). Le rendu ajoute les blocs dans cet ordre tant que le total reste sous le budget ; le premier bloc qui dépasse est coupé à la ligne, les suivants sont omis, et une dernière ligne dit ce qui a été omis.
 
-**Routage** : `proto.route(org, team, user, query, kind, limit)` en SQL. Requête normalisée et enrichie par le vocabulaire ; par nœud publié et lisible : similarité de trigrammes avec ses phrases déclencheuses (`similarity` et `word_similarity`), part des lexèmes de la requête présents dans ses phrases, titre et résumé, pénalité si une phrase voisine est plus proche qu'une déclencheuse, bonus équipe et usage récent (journal) ; score ramené entre 0 et 1. Les étapes ne sont servies que si le premier dépasse le seuil et devance le deuxième de l'écart (départ 0,85 et 0,2, calibrés en S02 sur le jeu de phrases de test). `find` appelle la même fonction avec son `type`, et cherche les fonctions du catalogue dans le code.
+**Routage** : `proto.route_candidates(org, query, kind, limit)` en SQL (migration `20260923130000_proto_route_v2.sql`) rend, par nœud publié hors `guide`, les **composantes** : similarité de trigrammes avec les phrases déclencheuses et avec les voisines (`similarity` et `word_similarity`), avec le titre, part des lexèmes de la requête d'origine trouvés dans les phrases, le titre et le résumé (requête enrichie par les termes dont un synonyme y figure à frontière de mot), nombre de lexèmes de la requête. `src/proto/services/routing.ts` filtre la lecture, mélange (0,55 × max(phrases, titre) + 0,45 × lexèmes, part lexicale atténuée sous deux lexèmes, écart retiré si une voisine est plus proche qu'une déclencheuse), ajoute les bonus équipe et usage (+0,03 chacun) et décide : étapes servies si le premier dépasse **0,65** et devance le deuxième de **0,1**. Seuil et écart calibrés le 2026-09-23 sur 132 phrases (le départ du doc fonctionnel, 0,85 et 0,2, ne servait aucune paraphrase) ; chiffres en tête de `routing.ts`, preuve dans `tests/integration/proto-routing.test.ts`. Limite connue : une négation (« ne relance pas les devis ») est reconnue comme la demande, l'accord demandé avant tout envoi couvre ce cas. `find` appelle la même fonction avec son `type`, et cherche les fonctions du catalogue dans le code (S04).
 
 **Droits** : nœud d'organisation lisible par tous les membres, modifiable par les admins ; nœud d'équipe lisible et modifiable par ses membres et les admins. Une fonction de connecteur s'exécute sous la première équipe de l'utilisateur (l'équipe par défaut d'abord) qui a le droit requis (read pour la classe read, write pour write et sensitive) ; sinon refus nommant l'équipe qui l'a et son responsable. Les fonctions `table.*` suivent les droits du nœud du tableau.
 

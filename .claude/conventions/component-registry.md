@@ -86,7 +86,9 @@
 | must, many, one | src/proto/db.ts | Lecture d'une réponse supabase-js (optionnelle, liste, ligne attendue) ; panne → `Proto store unavailable` |
 | resolveIdentity, canRead | src/proto/identity.ts | Utilisateur du segment d'URL → org, équipes (membre ou non, responsable) ; règle de lecture des nœuds |
 | requireCtx, issueCtx | src/proto/services/ctx.ts | Émission et garde du code ctx (absent, inconnu, autre utilisateur, règles changées) |
-| renderContext, buildContext | src/proto/services/context.ts | Blocs de context par priorité, budget coupé par la fin |
+| renderContext, buildContext | src/proto/services/context.ts | Blocs de context par priorité, budget coupé par la fin ; candidats et étapes servies (S02) |
+| rankCandidates, decide, blendScore | src/proto/services/routing.ts | Routage lexical : composantes SQL (`proto.route_candidates`) → score 0–1, seuil 0,65, écart 0,1 |
+| find | src/proto/services/find.ts | Trois candidats avec score, consigne de demander sous le seuil |
 | flushJournal, initializeEntries, loggedArgs | src/proto/services/journal.ts | Journal proto : écriture qui n'échoue jamais, client de l'initialize, arguments tronqués à 2 ko |
 | buildTools, toolKey, serverInstructions | src/proto/mcp/tools.ts | Six outils par organisation (préfixe, descriptions, inputSchema) |
 | installProto, buildServerOptions | src/proto/mcp/server.ts | Adaptateur MCP proto (handlers bas niveau, garde ctx, journal) |

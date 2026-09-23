@@ -20,6 +20,8 @@ const env = readEnv()
 /** Sans clés, les tests d'intégration proto sont sautés (message dans le describe). */
 export const hasDb = Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SECRET_KEY)
 export const SKIP_REASON = "proto : NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SECRET_KEY absente de .env.local"
+/** Un appel context enchaîne une dizaine de requêtes réseau : 5 s ne suffisent pas quand les fichiers tournent en parallèle. */
+export const INTEGRATION_TIMEOUT = 30_000
 
 export function testDb(): ProtoDb {
   return createClient<ProtoDatabase, "proto">(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SECRET_KEY!, {

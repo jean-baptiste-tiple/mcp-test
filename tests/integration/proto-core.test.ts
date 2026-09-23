@@ -8,9 +8,9 @@ import { resolveIdentity } from "@/proto/identity"
 import { buildContext, CONTEXT_BUDGET } from "@/proto/services/context"
 import { flushJournal } from "@/proto/services/journal"
 
-import { connectAs, hasDb, seedTestOrgs, SKIP_REASON, testDb, type TestOrgs } from "./proto-helpers"
+import { connectAs, hasDb, INTEGRATION_TIMEOUT, seedTestOrgs, SKIP_REASON, testDb, type TestOrgs } from "./proto-helpers"
 
-describe.skipIf(!hasDb)(`serveur proto — socle${hasDb ? "" : ` (${SKIP_REASON})`}`, () => {
+describe.skipIf(!hasDb)(`serveur proto — socle${hasDb ? "" : ` (${SKIP_REASON})`}`, { timeout: INTEGRATION_TIMEOUT }, () => {
   let db: ProtoDb
   let orgs: TestOrgs
   const jb = () => orgs.seed.users.jb.slug
@@ -127,7 +127,7 @@ describe.skipIf(!hasDb)(`serveur proto — socle${hasDb ? "" : ` (${SKIP_REASON}
   it("journal : une entrée par requête, écrite en base ; un journal en panne n'échoue pas", async () => {
     const session = await connectAs(db, jb(), "journal-test")
     await session.client.listTools()
-    const { code } = await session.openContext("relance les devis")
+    const { code } = await session.openContext("quelle heure est-il ?")
     await session.call("feedback", { ctx: code, type: "gap", text: "x" })
     await session.call("feedback", {})
 
@@ -138,7 +138,7 @@ describe.skipIf(!hasDb)(`serveur proto — socle${hasDb ? "" : ` (${SKIP_REASON}
       `tools/call:${session.prefix}_feedback`,
     ])
     const [, context, feedback, refused] = session.journal
-    expect(context).toMatchObject({ ctx: code, target: "relance les devis", is_error: false })
+    expect(context).toMatchObject({ ctx: code, target: "quelle heure est-il ?", is_error: false })
     expect(feedback).toMatchObject({ ctx: code, is_error: false })
     expect(feedback.target).toMatch(/^FB-/)
     expect(refused).toMatchObject({ is_error: true })

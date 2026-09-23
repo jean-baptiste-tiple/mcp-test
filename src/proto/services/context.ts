@@ -2,10 +2,11 @@
 // le code ctx puis des blocs classés par priorité, dans un budget d'environ 5 000 tokens, coupés
 // par la fin. Sans ce service, le modèle n'a ni code, ni personne, ni règles, ni index des procédures.
 import type { ProtoDb } from "../db"
-import { many, must } from "../db"
+import { many, must, one } from "../db"
 import { canRead, type Identity } from "../identity"
 import type { ServiceResult } from "../result"
 import { issueCtx } from "./ctx"
+import { type Candidate, decide, formatScore, rankCandidates } from "./routing"
 
 /** 5 000 tokens ≈ 20 000 caractères : arbitrage du doc fonctionnel (coût sur l'abonnement). */
 export const CONTEXT_BUDGET = 20_000
@@ -15,9 +16,12 @@ const MAX_RECENT = 20
 const MAX_TOPICS = 15
 const MAX_NEWS = 10
 const TRIGGERS_SHOWN = 3
+/** Candidats du routage montrés dans le bloc 1, servis ou non (doc fonctionnel : « restent visibles »). */
+const CANDIDATES_SHOWN = 3
 /** Sans conversation antérieure, les nouveautés remontent à 14 jours. */
 const NEWS_WINDOW_DAYS = 14
-const USAGE_WINDOW_DAYS = 90
+/** Ordre des « procédures utiles » : usage de l'organisation sur 90 jours. */
+const USEFUL_USAGE_DAYS = 90
 
 export type ContextBlock = { name: string; text: string }
 
@@ -60,13 +64,39 @@ function day(iso: string): string {
   return iso.slice(0, 10)
 }
 
-function codeBlock(prefix: string, code: string, phrase: string | undefined): ContextBlock {
+const candidateList = (list: Candidate[]) => list.map((c) => `${c.path} (${formatScore(c.score)})`).join(", ")
+
+/** Bloc 1 : le code, puis ce que le routage a trouvé pour la phrase (candidats toujours visibles). */
+function codeBlock(prefix: string, code: string, phrase: string | undefined, candidates: Candidate[], served: Candidate | null): ContextBlock {
   const lines = [
     `ctx: ${code}`,
     `Pass this ctx to every ${prefix}_ tool. If a tool answers "context has changed", call ${prefix}_context again.`,
   ]
-  if (!phrase) lines.push(`No request given: call ${prefix}_context again with the user's request as phrase to get the matching procedure.`)
+  if (!phrase) {
+    lines.push(`No request given: call ${prefix}_context again with the user's request as phrase to get the matching procedure.`)
+  } else if (served) {
+    const others = candidates.filter((c) => c !== served)
+    lines.push(
+      `Request « ${phrase} » matches ${served.path} (score ${formatScore(served.score)}): its steps follow.` +
+        (others.length ? ` Other candidates: ${candidateList(others)}.` : "")
+    )
+  } else if (candidates.length) {
+    lines.push(`Request « ${phrase} »: no clear match. Candidates: ${candidateList(candidates)}. Ask the user which procedure they mean; do not guess.`)
+  } else {
+    lines.push(`Request « ${phrase} »: no procedure matches. Say so instead of guessing; ${prefix}_find can search pages, tables and functions.`)
+  }
   return { name: "code", text: lines.join("\n") }
+}
+
+/** Bloc 2 : les étapes complètes de la procédure reconnue, avec ses appels exacts. */
+async function stepsBlock(db: ProtoDb, served: Candidate): Promise<ContextBlock> {
+  const node = one(await db.from("nodes").select("revision, title, sections").eq("id", served.nodeId).single(), "nodes")
+  const lines = [
+    `## Procedure ${served.path} (v${node.revision}): ${node.title}`,
+    "Follow these steps now. Ask the user's explicit approval before anything that sends or changes data.",
+  ]
+  for (const section of (node.sections ?? []) as Section[]) lines.push(`### ${section.title}`, section.body)
+  return { name: "procedure steps", text: lines.join("\n") }
 }
 
 function personBlock(identity: Identity): ContextBlock {
@@ -117,7 +147,7 @@ type NodeSummary = {
 
 /** Blocs 3 à 9 : ce que le serveur sait de la personne et de son organisation. */
 async function knowledgeBlocks(db: ProtoDb, identity: Identity, since: Date): Promise<ContextBlock[]> {
-  const usageSince = new Date(Date.now() - USAGE_WINDOW_DAYS * 86_400_000).toISOString()
+  const usageSince = new Date(Date.now() - USEFUL_USAGE_DAYS * 86_400_000).toISOString()
   const [nodesResult, guideResult, usageResult] = await Promise.all([
     db
       .from("nodes")
@@ -219,9 +249,21 @@ export async function buildContext(
   )
   const since = previous[0] ? new Date(previous[0].created_at) : new Date(Date.now() - NEWS_WINDOW_DAYS * 86_400_000)
 
-  const code = await issueCtx(db, identity, userAgent)
   const phrase = input.phrase?.trim() || undefined
-  const blocks = [codeBlock(identity.org.prefix, code, phrase), personBlock(identity), ...(await knowledgeBlocks(db, identity, since))]
+  // Indépendants : en parallèle (six allers-retours en série sinon).
+  const [code, candidates, knowledge] = await Promise.all([
+    issueCtx(db, identity, userAgent),
+    phrase ? rankCandidates(db, identity, phrase, "procedure", CANDIDATES_SHOWN) : Promise.resolve([]),
+    knowledgeBlocks(db, identity, since),
+  ])
+  const served = decide(candidates)
 
-  return { text: renderContext(blocks, budget, identity.org.prefix), ctx: code, target: phrase ?? null }
+  const blocks = [
+    codeBlock(identity.org.prefix, code, phrase, candidates, served),
+    ...(served ? [await stepsBlock(db, served)] : []),
+    personBlock(identity),
+    ...knowledge,
+  ]
+  // Journal : la procédure servie (sinon la phrase) — c'est ce que les usages et les preuves relisent.
+  return { text: renderContext(blocks, budget, identity.org.prefix), ctx: code, target: served?.path ?? phrase ?? null }
 }

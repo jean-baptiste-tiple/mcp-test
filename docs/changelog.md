@@ -11,6 +11,17 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-09-23] — E04-S02 Routage lexical et find
+**Quoi :** `proto.route_candidates` (SQL : trigrammes sur phrases déclencheuses, voisines et titre, lexèmes français sans accents, vocabulaire de l'organisation) et `routing.ts` (mélange 0,55 / 0,45, atténuation des requêtes d'un mot, pénalité des voisines, bonus équipe et usage, décision seuil 0,65 + écart 0,1). `context(phrase)` sert les étapes complètes de la procédure reconnue avec les autres candidats visibles, ou les candidats et la consigne de demander, ou « no procedure matches ». `find` : trois candidats avec score, par type.
+**Pourquoi :** preuve 4 de l'epic E04 (routage des intentions par le serveur, sans embedding).
+**Problèmes :** le départ du doc fonctionnel (0,85 et 0,2) ne servait aucune paraphrase ; une requête d'un seul mot (« relance ») servait des étapes (lexical = 1 d'office) → migration v2 et atténuation, recalibration sur 132 phrases.
+**Écarté :** le score entier en SQL (chaque réglage aurait coûté une migration) ; le seuil de départ sans calibration.
+**Fichiers :**
+- `supabase/migrations/20260923120000_proto_route.sql`, `20260923130000_proto_route_v2.sql`
+- `src/proto/services/routing.ts`, `find.ts`, `context.ts`, `src/proto/mcp/server.ts`, `src/types/proto-database.ts`
+- `tests/unit/proto-routing.test.ts`, `tests/integration/proto-routing.test.ts`, `proto-routing.cases.ts`, `proto-core.test.ts`, `proto-helpers.ts`
+- `docs/architecture.md`, `docs/stories/E04-S02-routage-et-find.md`, `.claude/conventions/component-registry.md`, `.claude/sprint/status.md`
+
 ## [2026-09-23] — E04-S01 Socle du serveur proto
 **Quoi :** Second serveur MCP `/api/proto/u/<utilisateur>/mcp` (identité = segment d'URL, ADR-003) : schéma `proto` (13 tables, RLS sans policy, service_role seul, exposé à PostgREST par migration), données fictives Acme Énergies (`acme_`) et Delta Logistique (`delta_`) avec seed rejouable, six outils déclarés par organisation (descriptions < 1 000, prérequis ctx en première phrase), `context` (code ctx, blocs par priorité, budget 20 000 coupé par la fin), garde ctx (absent, inconnu, autre utilisateur, règles changées), `feedback` (ticket), journal de chaque requête. find, read, write, call déclarés et refusés « not available yet » jusqu'à S02-S04.
 **Pourquoi :** socle des preuves de la maquette de la plateforme MCP d'entreprise (epic E04).
