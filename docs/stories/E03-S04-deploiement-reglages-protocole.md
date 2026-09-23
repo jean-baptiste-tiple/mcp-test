@@ -6,7 +6,7 @@
 |-------|--------|
 | **Epic** | E03 — Authentification des assistants : OAuth 2.1 avec Supabase |
 | **Parcours** | 4.6 Connecter un assistant par OAuth |
-| **Statut** | 🔵 In Progress |
+| **Statut** | ✅ Done (2026-09-23) |
 | **Priorité** | Must |
 | **Référence UI** | N/A |
 | **Conventions** | deploy, mcp, supabase, security |
@@ -71,7 +71,7 @@ Tout ce qui touche aux comptes de JB, et le protocole que les deux campagnes sui
 
 ## Post-implémentation
 
-En cours (2026-09-23) : tout ce qui ne dépend pas d'un réglage Supabase est fait par le pilote.
+Terminée le 2026-09-23 (pilote ; JB pour les décisions Supabase).
 
 ### Écarts avec l'architecture
 - Domaines `mcp-test-acme.vercel.app` et `mcp-test-e03-delta.vercel.app` (le second en repli : `mcp-test-delta` appartient à une autre équipe) ajoutés par l'API Vercel, rattachés à `e03-oauth`.
@@ -81,9 +81,10 @@ En cours (2026-09-23) : tout ce qui ne dépend pas d'un réglage Supabase est fa
 - Le smoke `whoami` avec un jeton réel a été joué sur les trois cas (JB sur Acme, alias sur Delta refusé, alias sur Acme) : voir `results-oauth.md`.
 
 ### Option plus simple écartée
-Déployer la page de consentement sur `main` (adresse de site actuelle) au lieu de changer l'adresse de site Supabase : aurait exigé la fusion de la branche avant toute mesure et mis la page sur un hôte sans organisation (marque « Banc MCP » toujours) ; l'adresse de site vers l'hôte Acme reste le geste minimal, réversible.
+Écartée d'abord : déployer la page de consentement sur `main` (adresse de site actuelle) au lieu de changer l'adresse de site Supabase — fusion avant toute mesure, page sur un hôte sans organisation. **Revirement le même jour** : JB a refusé de changer l'adresse de site (« une seule par projet, pas une par organisation » : c'est la contrainte de la cible, pas un réglage du banc) ; l'option écartée est devenue la bonne, et `main` a été avancé à `8a11b60` avec son accord. La marque « Banc MCP » sur le domaine commun n'est plus un défaut à masquer : c'est la mesure de l'adresse de site unique (preuve 9).
 
 ### Notes
 - Fait : domaines, variables Preview, protection, préversion `e794fa7` puis `25dfe39` (fusion de `main`), smoke HTTP complet consigné, `docs/bench/protocol.md` §9, `results-oauth.md` (squelette + smoke), README (S02).
-- Reste à JB (tableau de bord Supabase, le jeton de gestion étant révoqué et la session Supabase absente du navigateur piloté) : adresse de site `https://mcp-test-acme.vercel.app`, URLs de redirection `https://mcp-test-acme.vercel.app/**` et `https://mcp-test-e03-delta.vercel.app/**`. Sans l'adresse de site, le serveur OAuth redirige le consentement vers `mcp-test-navy.vercel.app/oauth/consent`, qui n'existe pas sur `main` : S05 et S06 attendent ce réglage.
+- Supabase (JB, ~16:00 UTC) : adresse de site laissée à `https://mcp-test-navy.vercel.app` ; URLs de redirection `https://*.mcp-test-navy.vercel.app*` ajoutées, sans effet sur les clients enregistrés dynamiquement (validés sur leurs propres `redirect_uris`). Conséquence : `main` avancé à `8a11b60` (~16:15), `NEXT_PUBLIC_SUPABASE_ANON_KEY` ajouté à Production par la CLI, production redéployée ; le consentement de tous les hôtes s'affiche sur `mcp-test-navy.vercel.app/oauth/consent`.
+- Sur la cible (`app.oto.cx`) : `acme.oto.cx` / `delta.oto.cx` par le wildcard, consentement sur `app.oto.cx`, redirection `https://*.oto.cx/**` (question de JB, répondue le 2026-09-23).
 - Comptes de test créés par le seed (JB et alias) avec `OAUTH_TEST_PASSWORD` de `.env.local` du worktree.

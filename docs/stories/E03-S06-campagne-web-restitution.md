@@ -6,7 +6,7 @@
 |-------|--------|
 | **Epic** | E03 — Authentification des assistants : OAuth 2.1 avec Supabase |
 | **Parcours** | 4.6 Connecter un assistant par OAuth |
-| **Statut** | 🟢 Ready |
+| **Statut** | ✅ Done (2026-09-23, coupée avant 8a/8b) |
 | **Priorité** | Must |
 | **Référence UI** | N/A |
 | **Conventions** | mcp, testing |
@@ -59,4 +59,16 @@ Les hosts web se pilotent par le navigateur (Playwright MCP, sessions de JB), le
 
 ## Post-implémentation
 
+Jouée le 2026-09-23 (16:27–17:10 UTC) par le pilote dans le navigateur Playwright (sessions claude.ai et ChatGPT de JB), coupée à 17:20 sur demande de JB. Résultats : `docs/bench/results-oauth.md` ; verdict : ADR-004 §Verdict (Accepté, décision 7 amendée) ; changements proposés au doc : dernière section de `results-oauth.md`.
+
+### Écarts avec la story
+- Connecteurs ajoutés et connectés par le pilote (mot de passe lu dans `.env.local` du worktree par le navigateur, jamais affiché), pas par JB.
+- Adresse de site Supabase inchangée (refus motivé de JB) : consentement sur `mcp-test-navy.vercel.app` après avance de `main` ; marque « Banc MCP » = mesure de l'adresse de site unique.
+- Non joué (coupé) : preuve 7 claude.ai (prouvée sur Claude Code et ChatGPT), 8a/8b après expiration (durée des jetons non baissée ; côté serveur, tests S07), déconnexion/reconnexion claude.ai, Claude Desktop, mobiles.
+- Rapport de frictions P15 non demandé aux modèles ; frictions relevées par le pilote au journal.
+
+### Option plus simple écartée
+Attendre JB pour les connexions et l'expiration : écarté à sa demande (« fais un maximum seul ») ; la mesure après expiration exigeait 1 h d'attente par jeton, coupée.
+
 ### Notes
+- Vercel Authentication laissée désactivée (à remettre en `all_except_custom_domains` si les domaines de branche ne servent plus) ; connecteurs Acme/Delta laissés sur claude.ai, ChatGPT et Claude Code (`claude mcp remove <nom> -s local`).

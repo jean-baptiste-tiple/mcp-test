@@ -3,7 +3,7 @@
 | Champ | Valeur |
 |-------|--------|
 | **Date** | 2026-09-23 |
-| **Statut** | Proposé (verdict attendu en E03-S06) |
+| **Statut** | Accepté, amendé sur la décision 7 (verdict E03-S06, 2026-09-23) |
 | **Décideur(s)** | JB, Claude |
 
 ## Contexte
@@ -43,9 +43,26 @@ Pour le banc, un serveur MCP de test qui met l'hypothèse en œuvre au plus cour
 - Le hook Custom Access Token (claims `org_id`, `user_role` de mcp-patterns §6.4) est hors périmètre : la cible ne met pas l'organisation dans le jeton.
 - `/api/mcp` (ADR-002) et `/api/proto/*` (ADR-003) restent sans authentification.
 
-## Verdict (E03-S06)
+## Verdict (E03-S06, 2026-09-23)
 
-À remplir : Supabase suffit, ou il faut une façade, et pour quoi ; par host, avec la date et la version cliente journalisée ; changements demandés à la section « Connexion et identité ».
+**Supabase suffit. Aucune façade d'autorisation.** Mesures dans `docs/bench/results-oauth.md`.
+
+| Host, version journalisée | Enregistrement, adresse de retour | Découverte | Consentement | Deux organisations | Non-membre | Rafraîchissement, révocation |
+|---------------------------|-----------------------------------|------------|--------------|--------------------|------------|------------------------------|
+| Claude Code 2.1.280, `claude-code@2.1.280` | client public par serveur, `http://localhost:<port>/callback`, `prompt=consent` | 401 → métadonnées suffixées | passe (16:59–17:02) | deux clients, deux sessions | connexion passe, appel refusé, message serveur rendu tel quel | non mesuré (jetons hors fenêtre) |
+| claude.ai, `Anthropic/ClaudeAI` puis `claude-ai@0.1.0` | client confidentiel `client_secret_post` par connecteur, `https://claude.ai/api/mcp/auth_callback` | `python-httpx` : POST → 401 → métadonnées suffixées | passe (16:28–16:32) | deux clients, deux sessions | non joué (coupé ; prouvé sur CC et GPT) | non mesuré après `exp` (coupé) ; jeton encore accepté après révocation (16:35) |
+| ChatGPT, `openai-mcp/1.0.0` | client public par connecteur, `https://chatgpt.com/connector/oauth/<id>` | `aiohttp` : POST → 401 → métadonnées | passe (16:39–16:43), popup | deux clients, deux sessions | second compte connecté, appel refusé sur demande explicite | non mesuré après `exp` (coupé) |
+
+Rien de ce qui aurait imposé une façade (§Décision, dernier paragraphe) n'est arrivé : l'enregistrement dynamique et les adresses de retour des trois hosts sont acceptés (`localhost` compris) ; les trois suivent `WWW-Authenticate` et les métadonnées de l'hôte appelé ; le consentement se rattache au client et, par `resource`, à l'organisation demandée ; l'adresse de site unique se vit sur le domaine commun.
+
+Trois points de l'hypothèse sont à corriger, pas à abandonner (changements proposés dans `results-oauth.md`) :
+1. **La page de consentement ne connaît pas l'adresse d'origine.** La demande d'autorisation porte le client (`client_name` choisi par l'host) et `resource` ; c'est `resource` — envoyé par les trois hosts, lisible dans `auth.oauth_authorizations` pendant l'attente — qui dit pour quelle organisation on consent. Décision 7 amendée : la marque vient de `resource`, pas de l'hôte de la page.
+2. **Les jetons ne sont pas liés à la ressource** (`aud` = `authenticated`, `resource` absent du jeton) : un jeton d'un hôte est accepté par un autre hôte du même projet. Conséquence négative confirmée ; aucun host n'a présenté le jeton d'un hôte à un autre (un client et une session par organisation) ; l'appartenance revérifiée à chaque appel reste la protection.
+3. **Révoquer ne coupe qu'au rafraîchissement.** Consentement révoqué et session supprimée : le jeton d'accès reste accepté jusqu'à `exp` (3 600 s). Couper tout de suite = retirer le membre ; réduire la fenêtre = raccourcir les jetons (réglage du projet, partagé avec le web).
+
+Dettes relevées : les hosts ne purgent jamais leurs clients (`auth.oauth_clients` grossit d'un client par connecteur, par organisation et par poste Claude Code) ; `server/discover`, envoyé par les trois hosts, reçoit 400 de mcp-handler (sans effet) ; une session Claude Code connectée à claude.ai présente aussi les connecteurs claude.ai (deux clients pour un utilisateur).
+
+**Statut : Accepté, amendé sur la décision 7.**
 
 ## Alternatives considérées
 

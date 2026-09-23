@@ -36,9 +36,9 @@ Prouver ou réfuter, avant tout développement de la plateforme, l'hypothèse «
 | E03-S01 | Schéma `oauth_test`, seed, scripts, journal | M | ✅ | — |
 | E03-S02 | Serveur MCP protégé par hôte : métadonnées, 401, jeton, appartenance, whoami et echo | L | ✅ | S01 |
 | E03-S03 | Connexion, consentement, clients autorisés | M | ✅ | S01 |
-| E03-S04 | Déploiement de préversion, réglages Vercel et Supabase, protocole | M | 🔵 | S02, S03 |
-| E03-S05 | Campagne Claude Code | M | 🟢 | S04 |
-| E03-S06 | Campagne claude.ai et ChatGPT, restitution et verdict | L | 🟢 | S05, E04-S07 |
+| E03-S04 | Déploiement de préversion, réglages Vercel et Supabase, protocole | M | ✅ | S02, S03 |
+| E03-S05 | Campagne Claude Code | M | ✅ | S04 |
+| E03-S06 | Campagne claude.ai et ChatGPT, restitution et verdict | L | ✅ | S05, E04-S07 |
 | E03-S07 | Fonctions d'observation et de révocation pour la campagne (clients enregistrés, sessions, révocation) | S | ✅ | S01 |
 
 S02, S03 et S07 ne se touchent pas (S02 : `src/auth-test/`, `src/app/api/auth-test/`, `.well-known` ; S03 : `src/app/(auth)/`, `src/app/oauth/`, `src/app/auth-test/`, `src/lib/supabase/`, `src/lib/actions/`, `src/middleware.ts`) : parallélisables après S01. Les dépendances `jose` (S02) et `@supabase/ssr` (S03) sont installées par le pilote avant de lancer les deux lots.
@@ -46,3 +46,4 @@ S02, S03 et S07 ne se touchent pas (S02 : `src/auth-test/`, `src/app/api/auth-te
 ## Historique
 
 - 2026-09-22 : cadrage initial « OAuth Supabase comme variable de test » (P2, Draft, parcours 4.2, une story L : consent, resource metadata, `withMcpAuth` sur `/api/mcp`, `user_id` dans `bench_events`). Remplacé le 2026-09-23 par le périmètre ci-dessus : l'objet n'est plus une variable du banc mais l'hypothèse d'authentification de la plateforme ; `/api/mcp` reste public (ADR-002).
+- 2026-09-23 — S04, S05, S06 terminées : campagne jouée sur les trois hosts (Claude Code par pseudo-terminal, claude.ai et ChatGPT par navigateur), coupée à 17:20 UTC par JB avant les mesures après expiration ; verdict ADR-004 : Supabase suffit, aucune façade, décision 7 amendée (marque du consentement par `resource`). Epic close.

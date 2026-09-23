@@ -34,9 +34,9 @@
 | E03-S01 | Schéma `oauth_test`, seed, scripts, journal | ✅ Done (2026-09-23, review + corrections) | Opus (agent) |
 | E03-S02 | Serveur MCP protégé par hôte : métadonnées, 401, jeton, appartenance, whoami et echo | ✅ Done (2026-09-23, review + corrections) | Opus (agent) |
 | E03-S03 | Connexion, consentement, clients autorisés | ✅ Done (2026-09-23, review + corrections) | Opus (agent) |
-| E03-S04 | Déploiement de préversion, réglages Vercel et Supabase, protocole | 🔵 In Progress (domaines, variables Preview, protection, préversion et smoke faits ; reste l'adresse de site et les URLs de redirection Supabase, à JB) | Fable + JB (comptes) |
-| E03-S05 | Campagne Claude Code | 🟢 Ready (après S04) | Fable + JB (connexion) |
-| E03-S06 | Campagne claude.ai et ChatGPT, restitution et verdict | 🟢 Ready (après S05 et E04-S07 : même navigateur) | Fable + JB (comptes) |
+| E03-S04 | Déploiement de préversion, réglages Vercel et Supabase, protocole | ✅ Done (2026-09-23 ; adresse de site inchangée, consentement sur `main`) | Fable + JB (décisions) |
+| E03-S05 | Campagne Claude Code | ✅ Done (2026-09-23 ; preuves 5, 6, 7, 9, 10 ; 8 non mesurée) | Fable |
+| E03-S06 | Campagne claude.ai et ChatGPT, restitution et verdict | ✅ Done (2026-09-23 ; coupée par JB à 17:20 : 8a/8b après expiration et preuve 7 CW non jouées ; verdict posé) | Fable |
 | E03-S07 | Fonctions d'observation et de révocation (clients enregistrés, sessions, révocation) | ✅ Done (2026-09-23, v2 avec `oauth_authorizations` / `oauth_consents`) | Opus (agent) |
 
 

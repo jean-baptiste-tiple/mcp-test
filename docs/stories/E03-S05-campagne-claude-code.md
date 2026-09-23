@@ -6,7 +6,7 @@
 |-------|--------|
 | **Epic** | E03 — Authentification des assistants : OAuth 2.1 avec Supabase |
 | **Parcours** | 4.6 Connecter un assistant par OAuth |
-| **Statut** | 🟢 Ready |
+| **Statut** | ✅ Done (2026-09-23) — preuves 5, 6, 7, 9, 10 ; preuve 8 non mesurée |
 | **Priorité** | Must |
 | **Référence UI** | N/A |
 | **Conventions** | mcp, testing |
@@ -59,4 +59,20 @@ Claude Code se pilote sans navigateur, sauf la connexion OAuth elle-même : JB s
 
 ## Post-implémentation
 
+Jouée le 2026-09-23 (16:57–17:02 UTC) par le pilote, sans JB : résultats dans `docs/bench/results-oauth.md` (colonne CC, empreintes, relevés, frictions).
+
+### Écarts avec la story
+- Connexion faite par le pilote et non par JB : `claude mcp login` exige un stdin TTY même avec `--no-browser` ; un pilote `node-pty` (scratchpad, non versionné) a lancé la CLI, lu l'URL d'autorisation dans sa sortie, et le consentement s'est joué dans le navigateur piloté (compte alias, déjà connecté sur le site pour la preuve 7 web). Les deux serveurs sont donc connectés comme l'alias, pas comme JB : preuve 5 sur Acme (alias membre), preuve 7 sur Delta, preuve 6 avec un hôte autorisé et un refusé. La variante « JB sur les deux » n'a pas été rejouée : rien ne dépend du compte, les faits mesurés (clients, sessions, jetons par serveur) sont les mêmes.
+- Serveurs ajoutés en scope `local` (`~/.claude.json`, projet `C:\apps\mcp-test`) et appelés par `claude -p … --allowedTools mcp__<serveur>__<tool>` depuis le projet, pas par `--mcp-config … --strict-mcp-config` : le run non strict a aussi chargé les connecteurs claude.ai de JB (mesure supplémentaire : le serveur Acme voit un second client, via le proxy Anthropic, pour le même utilisateur).
+- Preuve 8 non mesurée : durée des jetons laissée à 3 600 s (réglage du tableau de bord, JB), jetons émis à 17:00–17:02 ; l'expiration tombe après la fenêtre de la campagne.
+- Preuve 10 : `/mcp` en session interactive non joué (pilote sans terminal interactif) ; mesuré à la place : chaque `claude -p` et chaque `claude mcp get` rejoue `server/discover` + `initialize` + `initialized` + `tools/list` avec le jeton stocké, sans relire les métadonnées.
+- Rapport de frictions P15 : non demandé au modèle dans `claude -p` (sortie texte seule) ; frictions relevées par le pilote.
+
+### Option plus simple écartée
+Attendre JB pour la connexion interactive : écarté parce qu'il a demandé de faire un maximum seul ; le pilote `node-pty` (deux fichiers dans le scratchpad, aucun dans le dépôt) reste hors du code du projet.
+
 ### Notes
+- Client enregistré par Claude Code : `Claude Code (<nom du serveur>)`, public (`token_endpoint_auth_method` `none`), adresse de retour `http://localhost:<port aléatoire>/callback`, scopes openid email profile offline_access, `prompt=consent`, `resource` = URL du serveur, PKCE S256 ; un client par serveur.
+- Découverte : `server/discover` sans jeton → 401 → `GET /.well-known/oauth-protected-resource/api/auth-test/mcp` (forme suffixée de `WWW-Authenticate`), user agent `claude-code/2.1.280 (claude-vscode, …)` ; appels `-p` en `claude-code/2.1.280 (sdk-cli, agent-sdk/0.3.280)`, `client_name` `claude-code@2.1.280`.
+- Refus de l'alias sur Delta rendu par le modèle : « L'appel a échoué, voici le texte d'erreur exact : » puis le message serveur intégral.
+- À retirer après la campagne : `claude mcp remove acme-auth -s local`, `claude mcp remove delta-auth -s local` (laissés en place, JB décide).

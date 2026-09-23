@@ -3,6 +3,14 @@
 <!-- Ce fichier est mis à jour à chaque commit via /tm-dev.
      Format de chaque entrée :
 
+## [2026-09-23] — E03-S05 / S06 Campagne OAuth sur les trois hosts, verdict ADR-004
+**Quoi :** campagne jouée par le pilote : claude.ai (connecteurs Acme et Delta, consentement, whoami, révocation d'un grant, « Actualiser la liste d'outils »), ChatGPT (plugins OAuth, whoami, « Connecter un autre compte » avec l'alias, refus sur Delta), Claude Code 2.1.280 (`claude mcp add` + `claude mcp login` pilotés par pseudo-terminal, `claude -p` sur les deux serveurs) ; `results-oauth.md` rempli (empreintes, matrice 5 à 10, relevés, frictions, verdict, changements proposés au doc technique) ; ADR-004 passé à Accepté, décision 7 amendée ; mcp-patterns §6 (adresses de retour, `resource`, révocation) ; stories S04, S05, S06 closes ; epic E03 close.
+**Pourquoi :** prouver ou réfuter l'hypothèse « Connexion et identité » du doc technique. Verdict : Supabase suffit, aucune façade ; trois points à corriger dans le doc (la page de consentement ne connaît pas l'adresse d'origine, seulement le client et `resource` ; jetons non liés à la ressource, appartenance compensante ; révocation effective au rafraîchissement seulement).
+**Problèmes :** `claude mcp login` refuse un stdin non TTY même avec `--no-browser` (pseudo-terminal `node-pty` dans le scratchpad) ; adresse de site Supabase unique, refus de JB de la déplacer : `main` avancé pour servir le consentement sur le domaine commun ; campagne coupée par JB à 17:20 UTC avant les mesures après expiration (8a/8b hosts, preuve 7 claude.ai, déconnexion/reconnexion).
+**Écarté :** attendre JB pour chaque connexion (il a demandé de faire un maximum seul) ; baisser la durée des jetons (réglage partagé du projet, tableau de bord) ; rejouer les connexions Claude Code comme JB (rien ne dépend du compte).
+**Reste :** Vercel Authentication à remettre (`all_except_custom_domains`) si les domaines de branche ne servent plus ; connecteurs de test à retirer si JB le demande ; étiquette `denied_not_member http_400` du journal sur `server/discover` (dette S02).
+**Fichiers :** `docs/bench/results-oauth.md`, `docs/decisions/ADR-004-auth-assistants-supabase-oauth.md`, `docs/stories/E03-S04-*.md`, `E03-S05-*.md`, `E03-S06-*.md`, `docs/epics/E03-oauth-variable-de-test.md`, `.claude/conventions/mcp-patterns.md`, `.claude/sprint/status.md`
+
 ## [Date] — [Scope]
 **Quoi :** Ce qui a été fait
 **Pourquoi :** La raison / la story / le bug
