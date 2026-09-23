@@ -21,8 +21,8 @@
 
 | E04-S01 | Socle proto : schéma, données Acme et Delta, identité par URL, six outils, context, ctx, feedback, journal | ✅ Done (2026-09-23) | Opus |
 | E04-S02 | Routage lexical et find | ✅ Done (2026-09-23) | Opus |
-| E04-S03 | read et write | 🟢 Ready | Opus |
-| E04-S04 | call : catalogue, tableaux, connecteurs simulés, droits, confirmation, sondes | 🟢 Ready | Opus |
+| E04-S03 | read et write | ✅ Done (2026-09-23) | Opus |
+| E04-S04 | call : catalogue, tableaux, connecteurs simulés, droits, confirmation, sondes | ✅ Done (2026-09-23) | Opus |
 | E04-S05 | Prompts suggérés, variantes de mesure, golden queries proto | 🟢 Ready | Opus |
 | E04-S06 | Campagne Claude Code headless | 🟢 Ready | Opus |
 | E04-S07 | Campagne claude.ai et ChatGPT, restitution | 🟢 Ready | Opus + JB (comptes) |

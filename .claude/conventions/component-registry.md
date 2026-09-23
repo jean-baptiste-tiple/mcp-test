@@ -88,7 +88,12 @@
 | requireCtx, issueCtx | src/proto/services/ctx.ts | Émission et garde du code ctx (absent, inconnu, autre utilisateur, règles changées) |
 | renderContext, buildContext | src/proto/services/context.ts | Blocs de context par priorité, budget coupé par la fin ; candidats et étapes servies (S02) |
 | rankCandidates, decide, blendScore | src/proto/services/routing.ts | Routage lexical : composantes SQL (`proto.route_candidates`) → score 0–1, seuil 0,65, écart 0,1 |
-| find | src/proto/services/find.ts | Trois candidats avec score, consigne de demander sous le seuil |
+| find | src/proto/services/find.ts | Trois candidats avec score, consigne de demander sous le seuil ; fonctions du catalogue (S04) |
+| read, write | src/proto/services/read.ts, write.ts | Lecture par plan, section, révision ; écriture par opérations, brouillon, publication, garde de révision |
+| applyOps | src/proto/services/sections.ts | Opérations par section adressée par son titre (pures) |
+| callFunction | src/proto/services/call.ts | Droits d'équipe, arguments, confirmation en deux temps |
+| FUNCTIONS, defineFunction, describeFunction, searchFunctions | src/proto/functions/ | Catalogue des 13 fonctions (tableaux, sellsy, mail, slack, probe) |
+| canWrite, describeTeam | src/proto/identity.ts | Règle d'écriture ; équipe et responsable nommés dans un refus |
 | flushJournal, initializeEntries, loggedArgs | src/proto/services/journal.ts | Journal proto : écriture qui n'échoue jamais, client de l'initialize, arguments tronqués à 2 ko |
 | buildTools, toolKey, serverInstructions | src/proto/mcp/tools.ts | Six outils par organisation (préfixe, descriptions, inputSchema) |
 | installProto, buildServerOptions | src/proto/mcp/server.ts | Adaptateur MCP proto (handlers bas niveau, garde ctx, journal) |

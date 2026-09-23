@@ -95,3 +95,16 @@ export function canRead(identity: Identity, teamId: string | null): boolean {
   if (teamId === null || identity.user.role === "admin") return true
   return identity.teams.some((t) => t.id === teamId && t.member)
 }
+
+/** Nœud d'organisation : les admins ; nœud d'équipe : ses membres et les admins. */
+export function canWrite(identity: Identity, teamId: string | null): boolean {
+  if (identity.user.role === "admin") return true
+  return teamId !== null && identity.teams.some((t) => t.id === teamId && t.member)
+}
+
+/** « team Ventes (lead: Claire Morel) » : ce qu'un refus nomme pour dire à qui demander. */
+export function describeTeam(identity: Identity, teamId: string | null): string {
+  const team = identity.teams.find((t) => t.id === teamId)
+  if (!team) return "the organisation admins"
+  return team.leadName ? `team ${team.name} (lead: ${team.leadName})` : `team ${team.name}`
+}

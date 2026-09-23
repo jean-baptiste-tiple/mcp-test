@@ -11,6 +11,17 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-09-23] — E04-S03 et E04-S04 read, write et call
+**Quoi :** `read` (plan au-delà de 12 000 caractères, section par titre, changements depuis une révision, contrat d'une fonction, tableau), `write` (opérations par section, brouillon, publication, garde de révision et de brouillon, phrases de procédure, publication du guide → version des règles + 1). `call` : catalogue de 13 fonctions, arguments stricts, droits d'équipe avec refus nommant le responsable, confirmation en deux temps ; tableaux (`table.rows`, `aggregate`, `write` avec set / clear / verified_empty et null refusé, `claim`, `release`, `schema`), connecteurs simulés (sellsy, mail, slack), sondes `probe.payload` et `probe.echo`. `find` cherche aussi les fonctions. Procédures du seed réécrites dans la vraie forme de l'appel, envoi en deux temps.
+**Pourquoi :** preuves 6 et 7 de l'epic E04, et tout ce que les procédures appellent.
+**Problèmes :** review : brouillons concurrents qui s'écrasaient, release non gardé, clés d'arguments inconnues ignorées, procédures du seed qui contredisaient la confirmation en deux temps, cible absente du journal sur un refus ; tous corrigés et testés (claims concurrents compris).
+**Écarté :** remplacer la page entière à chaque écriture (contraire aux deltas) ; un outil par famille de fonctions (contraire aux six outils figés) ; de vraies API derrière les connecteurs (aucun réseau sortant).
+**Fichiers :**
+- `src/proto/functions/{define,registry,simulated,table}.ts`, `src/proto/services/{call,read,write,sections,find}.ts`, `src/proto/identity.ts`, `src/proto/mcp/server.ts`
+- `scripts/lib/proto-data.mjs`
+- `tests/unit/proto-ops.test.ts`, `tests/integration/proto-call.test.ts`, `tests/integration/proto-read-write.test.ts`
+- `docs/stories/E04-S02-routage-et-find.md`, `E04-S03-read-write.md`, `E04-S04-call-tableaux-connecteurs.md`, `.claude/conventions/component-registry.md`, `.claude/sprint/status.md`
+
 ## [2026-09-23] — E04-S02 Routage lexical et find
 **Quoi :** `proto.route_candidates` (SQL : trigrammes sur phrases déclencheuses, voisines et titre, lexèmes français sans accents, vocabulaire de l'organisation) et `routing.ts` (mélange 0,55 / 0,45, atténuation des requêtes d'un mot, pénalité des voisines, bonus équipe et usage, décision seuil 0,65 + écart 0,1). `context(phrase)` sert les étapes complètes de la procédure reconnue avec les autres candidats visibles, ou les candidats et la consigne de demander, ou « no procedure matches ». `find` : trois candidats avec score, par type.
 **Pourquoi :** preuve 4 de l'epic E04 (routage des intentions par le serveur, sans embedding).

@@ -13,8 +13,11 @@ import { ProtoError, type ServiceResult } from "../result"
 import { inputSchemas, parseInput, type ToolInput, type ToolKey } from "../schemas"
 import { buildContext } from "../services/context"
 import { requireCtx } from "../services/ctx"
+import { callFunction } from "../services/call"
 import { recordFeedback } from "../services/feedback"
 import { find } from "../services/find"
+import { read } from "../services/read"
+import { write } from "../services/write"
 import { type JournalEntry, loggedArgs } from "../services/journal"
 import { buildTools, serverInstructions, toolKey } from "./tools"
 
@@ -42,18 +45,12 @@ export function buildServerOptions(identity: Identity) {
 
 type Service<K extends ToolKey> = (deps: ProtoDeps, input: ToolInput<K>, ctx: string) => Promise<ServiceResult>
 
-function notYet(key: ToolKey): Service<ToolKey> {
-  return async ({ identity }) => {
-    throw new ProtoError(`${identity.org.prefix}_${key} is not available yet in this prototype.`)
-  }
-}
-
 const SERVICES: { [K in ToolKey]: Service<K> } = {
   context: ({ db, identity, userAgent }, input) => buildContext(db, identity, input, userAgent),
   find: ({ db, identity }, input) => find(db, identity, input),
-  read: notYet("read"),
-  call: notYet("call"),
-  write: notYet("write"),
+  read: ({ db, identity }, input) => read(db, identity, input),
+  call: ({ db, identity }, input) => callFunction(db, identity, input),
+  write: ({ db, identity }, input) => write(db, identity, input),
   feedback: ({ db, identity }, input, ctx) => recordFeedback(db, identity, input, ctx),
 }
 
@@ -71,6 +68,9 @@ async function runTool(deps: ProtoDeps, name: string, args: Record<string, unkno
     method: "tools/call",
     tool: name,
     ctx: typeof args.ctx === "string" ? args.ctx : null,
+    // Posée avant le service : un appel refusé (droits, arguments) garde sa cible au journal.
+    // Tronquée : non encore validée, elle part dans une colonne indexée (btree).
+    target: (typeof args.function === "string" ? args.function : typeof args.path === "string" ? args.path : null)?.slice(0, 200) ?? null,
     args: loggedArgs(args),
     args_chars: argsText.length,
   }
@@ -89,7 +89,7 @@ async function runTool(deps: ProtoDeps, name: string, args: Record<string, unkno
     const result = await (SERVICES[key] as Service<ToolKey>)(deps, parsed.data, ctx)
     Object.assign(entry, {
       ctx: result.ctx ?? entry.ctx,
-      target: result.target ?? null,
+      target: result.target ?? entry.target ?? null,
       team_id: result.teamId ?? null,
       is_error: false,
       result_chars: result.text.length,

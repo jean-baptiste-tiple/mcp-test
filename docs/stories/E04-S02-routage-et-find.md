@@ -29,9 +29,9 @@ Le serveur route les intentions : `context(phrase)` doit servir les étapes comp
 - [x] **Given** la calibration **Then** seuil et écart retenus sont des constantes de `routing.ts`, avec en commentaire les chiffres du jeu de test qui les justifient
 - [x] **Given** `acme_context {phrase: "relance les devis en attente"}` **Then** le bloc 1 liste les candidats avec score et le bloc 2 contient les sections complètes de `ventes/relance_devis` (chemin, version, étapes) ; les candidats suivants restent visibles
 - [x] **Given** une phrase ambiguë ou faible **Then** aucun bloc étapes, les candidats avec score et la consigne « Ask the user which procedure they mean; do not guess. » ; sans candidat, « No procedure matches. Say so instead of guessing; acme_find can search pages, tables and functions. »
-- [ ] (partiel : `type: "function"` branché en S04) **Given** `acme_find {ctx, query, type?}` **Then** au plus 3 candidats avec score, chemin, type et résumé ; `type: "function"` cherche le catalogue de fonctions (nom, description) dans le code ; sous le seuil de find, la consigne de demander
+- [x] (`type: "function"` branché en S04) **Given** `acme_find {ctx, query, type?}` **Then** au plus 3 candidats avec score, chemin, type et résumé ; `type: "function"` cherche le catalogue de fonctions (nom, description) dans le code ; sous le seuil de find, la consigne de demander
 - [x] **Given** `find` et `context` **Then** `structuredContent.text === content[0].text` (preuve 5)
-- [ ] (à mesurer après déploiement, noté en S04) **Given** Vercel **Then** `acme_context` avec phrase < 1,5 s p50 sur 10 appels (journal `duration_ms`)
+- [x] (mesuré le 2026-09-23 : p50 924 ms côté serveur, 11 appels) **Given** Vercel **Then** `acme_context` avec phrase < 1,5 s p50 sur 10 appels (journal `duration_ms`)
 
 ## Implémentation
 

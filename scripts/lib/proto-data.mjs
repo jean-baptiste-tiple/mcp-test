@@ -7,8 +7,13 @@
 // Les phrases de test du routage (paraphrases non stockées) vivent dans les tests, jamais ici.
 
 /** Code de l'appel exact d'une étape, tel que le modèle le recopie. */
-const call = (fn, args) => "```\nacme_call " + fn + " " + JSON.stringify(args) + "\n```"
-const dcall = (fn, args) => "```\ndelta_call " + fn + " " + JSON.stringify(args) + "\n```"
+const call = (fn, args) => "```\nacme_call " + JSON.stringify({ function: fn, arguments: args }) + "\n```"
+const dcall = (fn, args) => "```\ndelta_call " + JSON.stringify({ function: fn, arguments: args }) + "\n```"
+/** Envoi en deux temps : l'appel sans confirm rend un récapitulatif ; confirm: true à la racine, après accord. */
+const SEND_TWO_STEPS =
+  "Un premier appel sans confirm rend un récapitulatif ; après l'accord explicite de la personne, le même appel avec confirm: true à la racine :\n```\nacme_call " +
+  JSON.stringify({ function: "mail.send_draft", arguments: { id: "<id du brouillon>" }, confirm: true }) +
+  "\n```"
 
 function procedure(when, steps, rules) {
   return [
@@ -185,7 +190,7 @@ const ACME = {
           "Liste les devis en attente :\n" + call("sellsy.list_estimates", { status: "sent", older_than_days: 7 }),
           "Pour chaque devis, prépare un brouillon avec le modèle de ventes/modele_relance :\n" + call("mail.create_draft", { to: "<email du contact>", subject: "Votre devis <numéro>", body: "<modèle rempli>" }),
           "Montre la liste des brouillons à la personne et demande son accord avant tout envoi.",
-          "Seulement après son accord, envoie chaque brouillon :\n" + call("mail.send_draft", { id: "<id du brouillon>", confirm: true }),
+          "Seulement après son accord, envoie chaque brouillon. " + SEND_TWO_STEPS,
         ],
         "Jamais d'envoi sans accord. Un devis refusé ou accepté ne se relance pas."
       ),
@@ -286,7 +291,7 @@ const ACME = {
           ANNOUNCE,
           "Lis la FAQ :\n```\nacme_read {\"path\": \"support/faq\"}\n```",
           "Prépare le brouillon de réponse :\n" + call("mail.create_draft", { to: "<email du client>", subject: "Re: <objet>", body: "<réponse>" }),
-          "Montre le brouillon et demande l'accord avant envoi :\n" + call("mail.send_draft", { id: "<id>", confirm: true }),
+          "Montre le brouillon et demande l'accord avant envoi. " + SEND_TWO_STEPS,
         ],
         "Vouvoiement avec les clients. Si le problème touche plusieurs sites, c'est un incident : procédure support/escalade_incident."
       ),
