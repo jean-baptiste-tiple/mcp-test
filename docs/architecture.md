@@ -435,8 +435,8 @@ src/types/oauth-test-database.ts
 
 ### 10.8 Déploiement
 
-- Branche `e03-oauth`, worktree `C:\apps\mcp-test-e03`, préversion Vercel. Domaines `mcp-test-acme.vercel.app` et `mcp-test-e03-delta.vercel.app` rattachés à la branche (ajoutés le 2026-09-23 ; `mcp-test-delta.vercel.app` appartient à une autre équipe). Le projet est en protection « Standard » (Vercel Authentication) : les URL de déploiement et de branche répondent 302 (mesuré le 2026-09-23), seul `mcp-test-navy.vercel.app` est public → exception de protection pour les deux domaines (réglage du projet, par JB).
-- Variables de préversion (aucune n'existe en cible Preview le 2026-09-23) : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET`, posées par JB.
+- Branche `e03-oauth`, worktree `C:\apps\mcp-test-e03`, préversion Vercel. Domaines `mcp-test-acme.vercel.app` et `mcp-test-e03-delta.vercel.app` rattachés à la branche (ajoutés le 2026-09-23 ; `mcp-test-delta.vercel.app` appartient à une autre équipe). Protection du projet : en « Standard » (`all_except_custom_domains`) comme en « préversions seulement » (`preview`), un domaine rattaché à une branche reste protégé (mesuré le 2026-09-23 : 401 « Protected deployment », 302 vers le SSO) ; l'API du projet n'expose pas les exceptions de protection → Vercel Authentication désactivée sur le projet (`ssoProtection: null`, la production étant déjà publique), à remettre après la campagne.
+- Variables de préversion posées le 2026-09-23 par la CLI Vercel (valeurs lues dans `.env.local`, jamais affichées) : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET`.
 - Supabase (JB, chaque changement annoncé) : adresse de site = hôte Acme (la page de consentement y vit), URLs de redirection des deux hôtes, serveur OAuth et enregistrement dynamique (déjà actifs), comptes JB et alias par le seed, durée des jetons courte pendant la preuve 8 puis 3 600 s.
 - Migrations : `supabase db push --db-url` (jeton de la CLI révoqué), à un moment convenu avec JB.
 - Fusion dans `main` avec l'accord de JB, une fois E04 terminé.

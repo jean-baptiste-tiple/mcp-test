@@ -11,14 +11,31 @@
 | Serveur d'autorisation | `https://nwdmkehnxvqyxddgogtu.supabase.co/auth/v1` (enregistrement dynamique, PKCE S256, `offline_access`, JWKS ES256) | relu le 2026-09-23 |
 | Page de consentement | `/oauth/consent` sur l'adresse de site du projet Supabase (= hôte Acme pendant la campagne) | |
 | Comptes | JB (membre d'Acme et de Delta) ; alias `jean-baptiste+acme@tiple.io` (membre d'Acme seulement) | seed S01 |
-| Protection Vercel | « Standard » : URL de déploiement et de branche en 302 le 2026-09-23 ; domaines rattachés : à mesurer après le premier déploiement | |
+| Protection Vercel | Vercel Authentication désactivée sur le projet le 2026-09-23 à 15:06 UTC : en « Standard » comme en « préversions seulement », les domaines rattachés à la branche restaient protégés (mesuré) ; à remettre après la campagne | 2026-09-23 |
 
 ## Réglages faits (heure, qui, quoi)
 
 | Date, heure | Qui | Réglage | Relu |
 |-------------|-----|---------|------|
 | 2026-09-23 | pilote | Vercel : domaines `mcp-test-acme.vercel.app` et `mcp-test-e03-delta.vercel.app` rattachés à `e03-oauth` ; variables Preview `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET` (CLI, valeurs jamais affichées) | `vercel env ls preview` |
-| | JB | Supabase : adresse de site, URLs de redirection | |
+| 2026-09-23, 15:05–15:06 UTC | pilote | Vercel : `ssoProtection` passé de `all_except_custom_domains` à `preview` (domaines toujours protégés) puis à `null` (désactivé) | curl : 401 de notre serveur, 200 sur les métadonnées |
+| | JB | Supabase : adresse de site → `https://mcp-test-acme.vercel.app`, URLs de redirection des deux hôtes | |
+
+## Smoke HTTP de la préversion (S04, 2026-09-23, 15:06 UTC, déploiement `e794fa7`)
+
+| Contrôle | Acme | Delta |
+|----------|------|-------|
+| `POST /api/auth-test/mcp` sans jeton | 401, `WWW-Authenticate: Bearer error="invalid_token", …, resource_metadata="https://mcp-test-acme.vercel.app/.well-known/oauth-protected-resource/api/auth-test/mcp"` | 401, `resource_metadata` de l'hôte Delta |
+| `GET /.well-known/oauth-protected-resource/api/auth-test/mcp` | `resource` = `https://mcp-test-acme.vercel.app/api/auth-test/mcp`, `authorization_servers` = Supabase du banc, `scopes_supported` openid, email, profile, offline_access | idem avec l'hôte Delta |
+| Racine `/.well-known/oauth-protected-resource` et variante `/api/auth-test/mcp/.well-known/oauth-protected-resource` | 200 | 200 |
+| `GET /oauth/consent?authorization_id=x` sans session | 307 → `/login?redirect=%2Foauth%2Fconsent%3Fauthorization_id%3Dx` | idem |
+| `GET /api/auth-test/mcp` | 405 | 405 |
+| Jeton réel (mot de passe) de JB, `acme_whoami` | membre d'Acme, `aud` authenticated, `client` none, `exp` +3 600 s, `amr` password | — |
+| Jeton réel de l'alias, `delta_whoami` | — | `isError` : « You are signed in as jean-baptiste+acme@tiple.io but you are not a member of Delta Logistique. Ask an administrator of Delta Logistique to add you. » ; `tools/list` servi |
+| Jeton réel de l'alias, `acme_whoami` | membre d'Acme | — |
+| `https://mcp-test-navy.vercel.app/api/mcp` (`pnpm mcp:smoke`) | inchangé (4 tools, version 1.0.4) | |
+
+Protection Vercel, mesurée sur ces domaines : en « Standard » (`all_except_custom_domains`) et en « préversions seulement » (`preview`), un domaine rattaché à une branche reste protégé (401 « Protected deployment » sur POST, 302 vers le SSO sur GET). Vercel Authentication désactivée sur le projet à 15:06 UTC (`ssoProtection: null`, la production étant déjà publique) ; à remettre en `all_except_custom_domains` après la campagne.
 
 ## Empreintes des hosts (O1)
 
@@ -34,11 +51,11 @@
 
 | # | Preuve | Test | Résultat | Date |
 |---|--------|------|----------|------|
-| 1 | Sans jeton, jeton invalide, expiré ou d'une autre clé : 401, `WWW-Authenticate` vers les métadonnées du bon hôte | `tests/unit/auth-test-route.test.ts` | | |
-| 2 | Chaque hôte publie sa propre ressource (racine et variante suffixée) | `tests/unit/auth-test-metadata.test.ts` | | |
-| 3 | Membre : whoami rend la bonne organisation et le bon préfixe ; non-membre : refus nommant l'organisation, sans donnée | `tests/integration/auth-test-server.test.ts` | | |
-| 4 | Membre retiré : appel suivant refusé, même jeton | `tests/integration/auth-test-server.test.ts` | | |
-| 4 bis | RLS : le jeton d'un utilisateur ne lit que ses appartenances | `tests/integration/auth-test-schema.test.ts` | | |
+| 1 | Sans jeton, jeton invalide, expiré ou d'une autre clé : 401, `WWW-Authenticate` vers les métadonnées du bon hôte | `tests/unit/auth-test-route.test.ts` | ✅ 27 tests (absent, autre clé, expiré, autre `iss`, illisible, sans `sub`, JWKS en panne ; par hôte) | 2026-09-23 |
+| 2 | Chaque hôte publie sa propre ressource (racine et variante suffixée) | `tests/unit/auth-test-metadata.test.ts` | ✅ 11 tests ; confirmé en HTTP sur la préversion | 2026-09-23 |
+| 3 | Membre : whoami rend la bonne organisation et le bon préfixe ; non-membre : refus nommant l'organisation, sans donnée | `tests/integration/auth-test-server.test.ts` | ✅ jeton réel vérifié par la JWKS du projet ; confirmé en HTTP (JB sur Acme, alias refusé sur Delta) | 2026-09-23 |
+| 4 | Membre retiré : appel suivant refusé, même jeton | `tests/integration/auth-test-server.test.ts` | ✅ retrait puis refus, ajout puis accepté, sans cache | 2026-09-23 |
+| 4 bis | RLS : le jeton d'un utilisateur ne lit que ses appartenances | `tests/integration/auth-test-schema.test.ts` | ✅ ses lignes seulement ; insert, delete et journal refusés ; anonyme refusé dès le schéma (42501) | 2026-09-23 |
 
 ## Matrice host × preuve (5 à 11)
 

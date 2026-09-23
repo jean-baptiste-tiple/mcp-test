@@ -71,8 +71,19 @@ Tout ce qui touche aux comptes de JB, et le protocole que les deux campagnes sui
 
 ## Post-implémentation
 
+En cours (2026-09-23) : tout ce qui ne dépend pas d'un réglage Supabase est fait par le pilote.
+
 ### Écarts avec l'architecture
+- Domaines `mcp-test-acme.vercel.app` et `mcp-test-e03-delta.vercel.app` (le second en repli : `mcp-test-delta` appartient à une autre équipe) ajoutés par l'API Vercel, rattachés à `e03-oauth`.
+- Variables Preview posées par la CLI Vercel (`npx vercel env add … preview` depuis un dossier lié dans le scratchpad, valeurs lues dans `.env.local` par le shell, jamais affichées) et non par JB : la session CLI de JB était valide.
+- Protection : l'exception de protection n'est pas exposée par l'API du projet ; les niveaux `all_except_custom_domains` et `preview` protègent tous deux les domaines rattachés (mesuré : 401 « Protected deployment », 302 SSO) → Vercel Authentication désactivée sur le projet (`ssoProtection: null`), la production étant déjà publique. À remettre en `all_except_custom_domains` après la campagne.
+- Le contrôle 401 se fait en POST JSON-RPC (un GET rend 405).
+- Le smoke `whoami` avec un jeton réel a été joué sur les trois cas (JB sur Acme, alias sur Delta refusé, alias sur Acme) : voir `results-oauth.md`.
 
 ### Option plus simple écartée
+Déployer la page de consentement sur `main` (adresse de site actuelle) au lieu de changer l'adresse de site Supabase : aurait exigé la fusion de la branche avant toute mesure et mis la page sur un hôte sans organisation (marque « Banc MCP » toujours) ; l'adresse de site vers l'hôte Acme reste le geste minimal, réversible.
 
 ### Notes
+- Fait : domaines, variables Preview, protection, préversion `e794fa7` puis `25dfe39` (fusion de `main`), smoke HTTP complet consigné, `docs/bench/protocol.md` §9, `results-oauth.md` (squelette + smoke), README (S02).
+- Reste à JB (tableau de bord Supabase, le jeton de gestion étant révoqué et la session Supabase absente du navigateur piloté) : adresse de site `https://mcp-test-acme.vercel.app`, URLs de redirection `https://mcp-test-acme.vercel.app/**` et `https://mcp-test-e03-delta.vercel.app/**`. Sans l'adresse de site, le serveur OAuth redirige le consentement vers `mcp-test-navy.vercel.app/oauth/consent`, qui n'existe pas sur `main` : S05 et S06 attendent ce réglage.
+- Comptes de test créés par le seed (JB et alias) avec `OAUTH_TEST_PASSWORD` de `.env.local` du worktree.
