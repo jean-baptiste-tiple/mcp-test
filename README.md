@@ -95,6 +95,20 @@ scénario actif** : désactiver l'ancien d'abord. La liste des scénarios et les
 sur chacun sont dans `docs/bench/protocol.md`. `baseline` fait partie du catalogue : c'est le
 scénario témoin, actif par défaut.
 
+### Serveur proto (E04)
+
+Maquette de la plateforme MCP d'entreprise, à côté du banc : `/api/proto/u/<utilisateur>/mcp`,
+six outils préfixés par le client (`acme_*` pour `jb`, `delta_*` pour `jb-delta`). **Aucune
+authentification** : l'utilisateur est le segment d'URL (ADR-003), les données sont fictives
+(schéma `proto`). Ce n'est pas un exemple de produit.
+
+```bash
+pnpm proto:seed   # remplace les orgs acme et delta (journal compris)
+```
+
+Détail : `docs/architecture.md` §9. Les tests `tests/integration/proto-*.test.ts` tournent contre
+le Supabase du banc sur des organisations jetables, et se sautent sans les clés de `.env.local`.
+
 ## Le canal MCP en bref
 
 Les invariants que le template impose (détail dans `.claude/conventions/mcp-patterns.md`) :

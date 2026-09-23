@@ -73,6 +73,7 @@
 | Schema | Path | Champs cles | Utilise par |
 |--------|------|-------------|-------------|
 | BenchMutateInput | src/lib/schemas/bench-mutate.ts | action (enum), name, title, description, input_schema, instructions | tool `bench_mutate` (seule mutation du banc) |
+| inputSchemas(prefix) | src/proto/schemas.ts | entrées des six outils proto (zod/v4) ; `toInputSchema`, `parseInput` | adaptateur MCP proto (validation + inputSchema servi) |
 
 ## Utils
 
@@ -81,6 +82,16 @@
 | cn | src/lib/utils/cn.ts | Merge Tailwind classes (clsx + tailwind-merge) |
 | getAdminClient | src/lib/supabase/admin.ts | Client Supabase clé secrète, `server-only`, mémoïsé, typé `Database` — SEUL accès aux tables du banc (ADR-002). Jamais depuis un Client Component |
 | byteLength, truncateToBytes | src/lib/utils/byte-size.ts | Taille UTF-8 d'un texte, troncature à N octets (plafonds d'arguments et de journal) |
+| getProtoClient | src/lib/supabase/admin.ts | Client clé secrète typé `ProtoDatabase`, schéma `proto` — serveur proto seulement (ADR-003) |
+| must, many, one | src/proto/db.ts | Lecture d'une réponse supabase-js (optionnelle, liste, ligne attendue) ; panne → `Proto store unavailable` |
+| resolveIdentity, canRead | src/proto/identity.ts | Utilisateur du segment d'URL → org, équipes (membre ou non, responsable) ; règle de lecture des nœuds |
+| requireCtx, issueCtx | src/proto/services/ctx.ts | Émission et garde du code ctx (absent, inconnu, autre utilisateur, règles changées) |
+| renderContext, buildContext | src/proto/services/context.ts | Blocs de context par priorité, budget coupé par la fin |
+| flushJournal, initializeEntries, loggedArgs | src/proto/services/journal.ts | Journal proto : écriture qui n'échoue jamais, client de l'initialize, arguments tronqués à 2 ko |
+| buildTools, toolKey, serverInstructions | src/proto/mcp/tools.ts | Six outils par organisation (préfixe, descriptions, inputSchema) |
+| installProto, buildServerOptions | src/proto/mcp/server.ts | Adaptateur MCP proto (handlers bas niveau, garde ctx, journal) |
+| readEnv | scripts/lib/env.mjs | `.env.local` hors Next (scripts et tests proto) ; bench-seed.mjs garde sa propre copie |
+| seedProto, deleteProtoOrgs, protoOrgSlugs | scripts/lib/proto-seed.mjs | Données Acme et Delta en base ; orgs jetables suffixées pour les tests |
 
 ## Types partages
 
@@ -88,6 +99,9 @@
 |------|------|-------|
 | BenchScenarioRow, BenchToolRow, BenchEventInsert | src/mcp/bench/repository.ts | Alias des types générés `Database` — ne pas redéfinir |
 | BenchRepository, SupabaseBenchRepository | src/mcp/bench/repository.ts | Accès aux tables du banc ; client injecté ; mutations (updates posent `updated_at`), `hasRecentReadmeCall` |
+| ProtoDatabase, Proto*Row | src/types/proto-database.ts | Types du schéma `proto`, écrits à la main au format gen types (à régénérer quand le jeton revient) |
+| Identity, Team | src/proto/identity.ts | Qui appelle le serveur proto |
+| ServiceResult, ProtoError | src/proto/result.ts | Contrat service → adaptateur (texte ou refus actionnable) |
 | BenchSnapshot, loadSnapshot | src/mcp/bench/snapshot.ts | Scénario actif + tools activés, relu à chaque requête ; snapshot vide fabriqué à neuf (jamais partagé) |
 | parseRpcBody, logEvents | src/mcp/bench/events.ts | Journal JSON-RPC → `bench_events` (`BenchEventInsert`), plafonné à 100 événements par requête, jamais bloquant |
 | Handler, ToolHandler, dispatchToolCall | src/mcp/bench/registry.ts | Dispatch par `handler`, gardes ack / gate, erreurs actionnables ; les handlers sont dans `handlers/` |

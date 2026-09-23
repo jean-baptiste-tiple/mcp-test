@@ -73,3 +73,18 @@ Un serveur MCP unique sur Vercel dont les tools, les instructions et l'identité
 | mcp-handler refuse une init asynchrone ou des schémas JSON bruts | Moyen | Moyenne | Handler créé par requête depuis un snapshot ; handlers bas niveau `tools/list` et `tools/call` ; vérifié en S02 |
 | Limite de durée Vercel bloque `listChanged` | Moyen | Élevée | E02 : Redis, ou serveur local plus tunnel |
 | Pollution du journal (serveur public) | Faible | Faible | Filtre par clientInfo et user-agent ; URL non publiée |
+
+## Évolution E04 — Maquette de la plateforme MCP d'entreprise (2026-09-23)
+
+### Problème
+À partir des mesures d'E01, JB a conçu une plateforme MCP d'entreprise : six outils figés, un code ctx exigé partout, un routage des intentions fait par le serveur ([architecture fonctionnelle](https://claude.ai/artifact/Hjg9VEJ5EMwtDu8nqJ7PYg), [architecture technique](https://claude.ai/artifact/Dumt9aN5erv1eGtiPq14ZK)). Sept mesures restent ouvertes, et rien ne prouve encore que les trois hosts suivent ce contrat. Construire la plateforme sur une hypothèse fausse coûterait des semaines ; une maquette qui tourne coûte quelques jours.
+
+### Solution
+Un second serveur MCP dans le banc, à côté du premier qui reste intact : `/api/proto/u/<utilisateur>/mcp`. Six outils préfixés par la marque du client, données fictives dans le schéma `proto` du Supabase du banc, connecteurs simulés sans réseau, journal de chaque appel. Deux clients fictifs, **Acme Énergies** (`acme_`) et **Delta** (`delta_`), branchés en même temps dans le même host : les noms d'outils par client se vérifient aussi. Code organisé comme le futur paquet : schémas Zod, services, adaptateur MCP fin.
+
+### Scope E04
+- IN : les six outils, le code ctx et sa version des règles, le budget de `context`, le routage lexical Postgres, les tableaux derrière `call`, cinq fonctions de connecteurs simulées, les droits d'équipe, la confirmation en deux temps, la capacité `prompts`, les données Acme et Delta, les preuves sans host (Vitest) puis sur Claude Code, claude.ai et ChatGPT, `docs/bench/results-proto.md`.
+- OUT : OAuth (identité = segment d'URL, ADR-003), IA serveur, embeddings, entité « projet », connecteur admin, interface web, service connecteurs Python, coffre de secrets, liens `[[…]]`, alias de chemins.
+
+### Succès
+Les huit preuves sans host passent ; sur les trois hosts, `context` est appelé en premier, les golden queries suivent la bonne procédure en deux appels avant la première action avec accord avant tout envoi ; les sept mesures ont un chiffre ; les changements à apporter aux deux docs d'architecture sont listés.

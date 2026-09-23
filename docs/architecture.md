@@ -1,6 +1,6 @@
 # Architecture — MCP Bench
 
-**Dernière MAJ :** 2026-09-22
+**Dernière MAJ :** 2026-09-23
 
 ## 1. Vue d'ensemble
 
@@ -232,6 +232,117 @@ Phase 1 : aucune (ADR-002). Phase 3 (E03) : Supabase OAuth 2.1 Server, `/.well-k
 - **Environnements :** local (`.env.local`) et production. Pas de staging.
 - **Variables Vercel (production) :** `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET` (S03). `NEXT_PUBLIC_SITE_URL` et `MCP_RESOURCE_URL` ne sont lues par aucun code en phase 1 : elles reviennent avec E03 (RFC 9728).
 
+## 9. Serveur proto — maquette de la plateforme (E04)
+
+Second serveur MCP du dépôt, sans lien de code avec le banc : il reprend la cible des deux docs d'architecture ([fonctionnelle](https://claude.ai/artifact/Hjg9VEJ5EMwtDu8nqJ7PYg), [technique](https://claude.ai/artifact/Dumt9aN5erv1eGtiPq14ZK)) au plus court, pour la mesurer. Le banc (`/api/mcp`, tables `bench_*`) reste intact.
+
+### 9.1 Vue d'ensemble
+
+```mermaid
+graph TB
+    H[Claude Code, claude.ai, ChatGPT] -->|/api/proto/u/jb/mcp| R[Route : utilisateur du segment]
+    H -->|/api/proto/u/jb-delta/mcp| R
+    R --> A[Adaptateur MCP : six outils préfixés, prompts]
+    A --> S[Services : ctx, context, routing, find, read, write, call, feedback]
+    S --> F[Catalogue de fonctions : table.*, sellsy.*, mail.*, slack.*, probe.*]
+    S --> DB[(Supabase du banc, schéma proto)]
+    F --> DB
+    A --> J[Journal : after() → proto.journal]
+    SEED[scripts/proto-seed.mjs] --> DB
+```
+
+Aucune IA serveur, aucun embedding, aucun appel réseau sortant : les connecteurs sont simulés sur des données déterministes.
+
+### 9.2 Structure
+
+```
+src/app/api/proto/u/[user]/[transport]/route.ts  # POST : résout l'utilisateur, handler par requête, journal ; GET/DELETE 405
+src/proto/
+├── schemas.ts          # Zod (zod/v4) : entrées des six outils ; z.toJSONSchema sert l'inputSchema
+├── db.ts               # type ProtoDb (client injecté : getProtoClient() d'admin.ts ou client de test), must/many/one
+├── result.ts           # ServiceResult et ProtoError (refus actionnable rendu au modèle)
+├── identity.ts         # slug → { org, user, teams } ; erreur si inconnu
+├── services/
+│   ├── ctx.ts          # émettre et vérifier un code ctx
+│   ├── context.ts      # blocs par priorité, budget, rendu texte
+│   ├── routing.ts      # appel de proto.route, décision seuil + écart
+│   ├── find.ts  read.ts  write.ts  call.ts  feedback.ts
+│   └── journal.ts      # entrées de journal, flush
+├── functions/
+│   ├── registry.ts     # catalogue : nom, connecteur, classe (read, write, sensitive), schéma Zod, exemples, handler
+│   ├── table.ts        # table.rows, aggregate, write, claim, release, schema
+│   └── simulated.ts    # sellsy, mail, slack, probe (fixtures en tête de fichier)
+└── mcp/
+    ├── tools.ts        # six définitions par préfixe : nom, description, inputSchema
+    └── server.ts       # handlers bas niveau tools/list, tools/call, prompts/list, prompts/get
+scripts/lib/proto-data.mjs   # SOURCE UNIQUE des données Acme et Delta
+scripts/lib/proto-seed.mjs   # seedProto(client, { suffix }) : script et tests
+scripts/lib/env.mjs          # lecture de .env.local hors Next (scripts proto, tests)
+scripts/proto-seed.mjs       # pnpm proto:seed (remplace les orgs acme et delta)
+src/types/proto-database.ts  # écrit à la main au format gen types (jeton de gestion révoqué, pas de Docker)
+```
+
+L'ordre du futur paquet est tenu : schémas, services, adaptateur. Un service reçoit `(identity, input)` et rend `{ text }` ou une erreur nommée ; l'adaptateur ne fait que vérifier le ctx, appeler, journaliser et mettre en forme.
+
+### 9.3 Modèle de données (schéma `proto`)
+
+Toutes les tables portent `org_id` (directement ou par leur nœud) avec `on delete cascade` : supprimer une organisation efface tout, ce que les tests font à la fin.
+
+| Table | Colonnes clés | Rôle |
+|-------|---------------|------|
+| orgs | slug unique, name, prefix unique (`^[a-z][a-z0-9]{1,11}$`), domains (null = description de context sans domaines, mesure 6), topics jsonb `[{subject, path}]`, rules_version int | Un client |
+| teams | org_id, slug, name, lead_user_id, rules text, connectors jsonb `{connecteur: read\|write}` | Une équipe et ses droits sur les connecteurs |
+| users | org_id, slug unique global (`^[a-z0-9-]{2,40}$`, segment d'URL), name, role (admin, member), default_team_id, profile jsonb `{langue, ton, preferences}` | Une personne |
+| team_members | team_id, user_id | Appartenance |
+| nodes | org_id, team_id null (null = nœud d'organisation), path unique par org, title, summary ≤ 200, kind (page, procedure, table), status (draft, published), revision (0 = jamais publié), sections jsonb `[{title, body}]`, draft jsonb null `{sections, title, summary, triggers, neighbors, base_revision}`, meta jsonb (table : columns, key, state_column, states ; procédure : suggested), updated_by, updated_at | Pages, procédures, tableaux |
+| node_versions | node_id, revision, title, summary, sections, author, created_at | Historique : `read` depuis une révision, nouveautés |
+| triggers | node_id, phrase, sense (trigger, neighbor), norm (généré : `proto.norm(phrase)`), tsv (généré : `to_tsvector('proto.fr', phrase)`) ; index GIN trigrammes sur norm et GIN sur tsv | Phrases d'une procédure |
+| vocabulary | org_id, term, synonyms text[] | Sigles et synonymes ajoutés à la requête |
+| rows | node_id, key unique par tableau, values jsonb, provenance jsonb `{colonne: {origin, by, at, reason}}`, claimed_by, lease_until, revision | Lignes d'un tableau, file de travail |
+| mail_drafts | id `dr_…`, org_id, user_id, to_addr, subject, body, status (draft, sent), sent_at | État du connecteur mail simulé |
+| ctx | code pk (`XXXX-XXXX`), org_id, user_id, rules_version, user_agent, created_at | Code de contexte |
+| journal | ts, org_id, user_id, team_id, ctx, method, tool, target (fonction ou chemin), args (2 ko max), args_chars, result_chars, is_error, error, duration_ms, client_name, user_agent | Le journal fait foi |
+| feedback | id (numéro de ticket), org_id, user_id, ctx, type (friction, gap, error), text | Signalements |
+
+`proto.norm(text)` = `lower(unaccent(text))`, déclarée immutable ; `proto.fr` = configuration plein texte `french` avec `unaccent` avant `french_stem`. Extensions `unaccent` et `pg_trgm` dans le schéma `extensions`.
+
+**RLS et accès** (ADR-003) : RLS activée sur les 13 tables, aucune policy ; `usage` et privilèges accordés à `service_role` seulement, révoqués à `anon` et `authenticated` ; `proto` ajouté aux schémas exposés de PostgREST par la migration `20260923090100_proto_expose.sql` (`alter role authenticator set pgrst.db_schemas`), faute de jeton pour l'API de gestion. ⚠️ Ce réglage en base prime sur le tableau de bord : changer les schémas exposés dans le tableau de bord n'a plus d'effet, reprendre la liste de la migration. Les droits d'équipe sont appliqués par les services.
+
+### 9.4 Contrat des six outils
+
+Noms = `<prefix>_<outil>` calculés par requête depuis l'organisation de l'utilisateur. Descriptions en anglais, < 1 000 caractères ; les cinq outils autres que context commencent par « Requires the ctx code from <prefix>_context; call it first. ». Instructions serveur : une phrase qui renvoie à context (elles ne portent rien de vital, mesuré en E01).
+
+| Outil | Entrées (plates) | Rend |
+|-------|------------------|------|
+| context | `phrase?` | code ctx + blocs par priorité, ≤ 20 000 caractères |
+| find | `ctx, query, type?` (procedure, page, table, function) | 3 candidats avec score |
+| read | `ctx, path, section?, outline?, since_revision?, draft?` ; `path` = chemin de nœud ou nom de fonction | en-tête + contenu, plan, section, changements ; contrat d'une fonction |
+| write | `ctx, path, base_revision?, title?, summary?, kind?, ops?, triggers?, neighbors?, publish?` | révision, sections touchées, ou refus avec l'état actuel |
+| call | `ctx, function, arguments?` (objet libre), `confirm?` | résultat, ou récapitulatif à faire approuver |
+| feedback | `ctx, type, text` | numéro de ticket |
+
+**Vérification du ctx**, avant tout service : code absent ou inconnu, ou d'un autre utilisateur → « Missing or unknown ctx. Call <prefix>_context first and pass its ctx code. » ; `rules_version` différente de celle de l'organisation → « context has changed, call <prefix>_context again ».
+
+**Résultat** : `content[0].text` et `structuredContent.text` portent la même chaîne ; les erreurs sont en texte seul avec `isError`.
+
+**Budget de context** : blocs dans l'ordre code et candidats, étapes de la procédure reconnue, personne, organisation (sections du nœud `guide`), équipe, nouveautés, procédures utiles (60), documents récents (20), pointeurs par sujet (15). Le rendu ajoute les blocs dans cet ordre tant que le total reste sous le budget ; le premier bloc qui dépasse est coupé à la ligne, les suivants sont omis, et une dernière ligne dit ce qui a été omis.
+
+**Routage** : `proto.route(org, team, user, query, kind, limit)` en SQL. Requête normalisée et enrichie par le vocabulaire ; par nœud publié et lisible : similarité de trigrammes avec ses phrases déclencheuses (`similarity` et `word_similarity`), part des lexèmes de la requête présents dans ses phrases, titre et résumé, pénalité si une phrase voisine est plus proche qu'une déclencheuse, bonus équipe et usage récent (journal) ; score ramené entre 0 et 1. Les étapes ne sont servies que si le premier dépasse le seuil et devance le deuxième de l'écart (départ 0,85 et 0,2, calibrés en S02 sur le jeu de phrases de test). `find` appelle la même fonction avec son `type`, et cherche les fonctions du catalogue dans le code.
+
+**Droits** : nœud d'organisation lisible par tous les membres, modifiable par les admins ; nœud d'équipe lisible et modifiable par ses membres et les admins. Une fonction de connecteur s'exécute sous la première équipe de l'utilisateur (l'équipe par défaut d'abord) qui a le droit requis (read pour la classe read, write pour write et sensitive) ; sinon refus nommant l'équipe qui l'a et son responsable. Les fonctions `table.*` suivent les droits du nœud du tableau.
+
+**Confirmation** : une fonction `sensitive` sans `confirm: true` ne s'exécute pas et rend un récapitulatif nominatif avec la consigne de demander l'accord de l'utilisateur.
+
+**Journal** : l'adaptateur empile une entrée par requête traitée (initialize, tools/list, tools/call, prompts/*) ; la route les écrit dans `after()`. Un échec du journal ne change jamais la réponse.
+
+### 9.5 Tests
+
+Les services parlent au vrai Postgres (plein texte, trigrammes, cascades) : les preuves tournent contre le Supabase du banc, sur des organisations jetables (`seedProto(client, { suffix })`, slugs suffixés), supprimées en fin de fichier. Fichiers `tests/integration/proto-*.test.ts`, sautés avec un message explicite si `.env.local` n'a pas les clés. La preuve 8 (noms, descriptions) est un test unitaire sans base. Pas de repository mémoire : il aurait dupliqué le SQL qu'on veut justement éprouver.
+
+### 9.6 Sécurité
+
+Endpoint public sans authentification (ADR-003) ; données fictives uniquement. Arguments d'un appel plafonnés à 1 Mo (mesure 4), `probe.payload` à 200 000 caractères (mesure 3), `args` journalisés tronqués à 2 ko. Aucune fonction n'accepte un secret.
+
 ## Invariants
 
 Ces choix ne changent JAMAIS sans ADR documenté :
@@ -241,7 +352,8 @@ Ces choix ne changent JAMAIS sans ADR documenté :
 - Zod pour toute validation d'entrée mutante
 - Migrations SQL versionnées
 - Transport stateless (ADR-001)
-- Tools = données en base, le code ne contient que les handlers (ADR-002)
+- Tools = données en base, le code ne contient que les handlers (ADR-002) — serveur du banc seulement ; le serveur proto a ses six outils dans le code (ADR-003)
+- Serveur proto : identité = segment d'URL, aucune IA serveur, aucun embedding (ADR-003)
 - Aucun cache serveur du snapshot
 
 ## Flexible

@@ -7,6 +7,7 @@ import "server-only"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 import type { Database } from "@/types/database"
+import type { ProtoDatabase } from "@/types/proto-database"
 
 // Mémoïsé : un client par process, sinon chaque appel instancie un GoTrueClient de plus.
 let adminClient: SupabaseClient<Database> | null = null
@@ -24,4 +25,23 @@ export function getAdminClient(): SupabaseClient<Database> {
     auth: { persistSession: false, autoRefreshToken: false },
   })
   return adminClient
+}
+
+// Serveur proto (E04, ADR-003 §3) : même clé, schéma `proto`. Client distinct parce que le typage
+// de supabase-js se fixe à la création : `adminClient.schema("proto")` perdrait les types de proto.
+let protoClient: SupabaseClient<ProtoDatabase, "proto"> | null = null
+
+export function getProtoClient(): SupabaseClient<ProtoDatabase, "proto"> {
+  if (protoClient) return protoClient
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const secretKey = process.env.SUPABASE_SECRET_KEY
+  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL manquante (voir .env.example)")
+  if (!secretKey) throw new Error("SUPABASE_SECRET_KEY manquante (voir .env.example)")
+
+  protoClient = createClient<ProtoDatabase, "proto">(url, secretKey, {
+    db: { schema: "proto" },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  return protoClient
 }

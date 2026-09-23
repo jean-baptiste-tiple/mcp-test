@@ -11,6 +11,30 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-09-23] — E04-S01 Socle du serveur proto
+**Quoi :** Second serveur MCP `/api/proto/u/<utilisateur>/mcp` (identité = segment d'URL, ADR-003) : schéma `proto` (13 tables, RLS sans policy, service_role seul, exposé à PostgREST par migration), données fictives Acme Énergies (`acme_`) et Delta Logistique (`delta_`) avec seed rejouable, six outils déclarés par organisation (descriptions < 1 000, prérequis ctx en première phrase), `context` (code ctx, blocs par priorité, budget 20 000 coupé par la fin), garde ctx (absent, inconnu, autre utilisateur, règles changées), `feedback` (ticket), journal de chaque requête. find, read, write, call déclarés et refusés « not available yet » jusqu'à S02-S04.
+**Pourquoi :** socle des preuves de la maquette de la plateforme MCP d'entreprise (epic E04).
+**Problèmes :** jeton de l'API de gestion Supabase révoqué (exposition du schéma par `alter role authenticator`, types écrits à la main, `db push --db-url`) ; insert groupé du journal qui tombait sur `is_error` null (défaut posé). Une commande en échec a affiché la chaîne de connexion Postgres dans la session : mot de passe à faire tourner.
+**Écarté :** repository mémoire pour les tests (dupliquerait le SQL à éprouver) ; `registerTool` (erreur générique au lieu de « call acme_context first »). Le modèle de données entier dans une migration, colonnes de S02-S04 comprises, est un arbitrage de cadrage assumé (en-tête de la migration).
+**Fichiers :**
+- `supabase/migrations/20260923090000_proto.sql`, `20260923090100_proto_expose.sql`
+- `scripts/proto-seed.mjs`, `scripts/lib/proto-data.mjs` (+ `.d.mts`), `scripts/lib/proto-seed.mjs` (+ `.d.mts`), `scripts/lib/env.mjs` (+ `.d.mts`)
+- `src/types/proto-database.ts`, `src/lib/supabase/admin.ts`
+- `src/proto/db.ts`, `result.ts`, `identity.ts`, `schemas.ts`, `services/{ctx,context,feedback,journal}.ts`, `mcp/{tools,server}.ts`
+- `src/app/api/proto/u/[user]/[transport]/route.ts`
+- `tests/unit/proto-tools.test.ts`, `tests/unit/proto-route.test.ts`, `tests/integration/proto-core.test.ts`, `tests/integration/proto-helpers.ts`
+- `package.json`, `README.md`, `docs/architecture.md`, `docs/decisions/ADR-003-identite-test-proto.md`, `docs/stories/E04-S01-socle-proto.md`, `.claude/conventions/component-registry.md`, `.claude/sprint/status.md`
+
+## [2026-09-23] — Cadrage E04 : maquette de la plateforme MCP d'entreprise
+**Quoi :** `/tm-plan` en mode évolution. Brief (section E04), PRD parcours 4.5 (FR-PROTO-01 à 17), architecture §9 (serveur proto : route par utilisateur, schéma `proto` de 13 tables, contrat des six outils, routage, droits, tests), ADR-003 (identité de test par segment d'URL), epic E04 et sept stories. Deux clients fictifs, Acme (`acme_`) et Delta (`delta_`), branchés ensemble dans chaque host pour vérifier les noms d'outils par client.
+**Pourquoi :** prouver le contrat des docs d'architecture fonctionnelle et technique, et chiffrer leurs sept mesures ouvertes, avant de construire la plateforme.
+**Écarté :** un repository mémoire pour les tests (comme le banc) : il aurait dupliqué en TypeScript le plein texte et les trigrammes qu'on veut éprouver ; les preuves tournent contre le Supabase du banc sur des organisations jetables. Et OAuth (E03) pour l'identité : aucune preuve ni mesure n'en dépend.
+**Fichiers :**
+- `docs/brief.md`, `docs/prd.md`, `docs/architecture.md`, `docs/decisions/ADR-003-identite-test-proto.md`
+- `docs/epics/E04-maquette-plateforme.md`, `docs/epics/_index.md`
+- `docs/stories/E04-S01` à `E04-S07`
+- `.claude/sprint/status.md`
+
 ## [2026-09-22] — E01-S05 Restitution dans les conventions + fin de campagne
 **Quoi :** Fin de la campagne, pilotée automatiquement (Claude Code en `claude -p` ; claude.ai et ChatGPT par navigateur Playwright) : grille C sur les trois hosts (descriptions et instructions longues, noms, nombre de tools, schéma profond, identité) ; grille D complétée (témoin et `name_first` sur claude.ai, Sonnet 5 / Fable 5.1 / Haiku 4.5 sur claude.ai, « Analyser » sur ChatGPT, Sonnet et Fable sur Claude Code) ; contrôle du canal lu par le modèle (P16) ; rapports de frictions P15 ; clôture (`baseline`, seed). Restitution E01-S05 : `mcp-patterns.md` §2.1, §2.4 (nouveau, readme + ack), §3, §4, §4 bis, §7, §8 (grille des gestes de rafraîchissement), §10 ; `CLAUDE.md` règles MCP 6 et 7 ; template golden queries ; starter MCP. Runbook et protocole : pièges de pilotage et prompt P16.
 **Pourquoi :** Remplacer par des mesures datées les affirmations non mesurées des conventions (story E01-S05). Faits majeurs : Claude Code ne montre que `structuredContent` quand il existe (claude.ai et ChatGPT le texte) ; claude.ai ne montre jamais les instructions et fige parfois une conversation sur un instantané local des tools ; Claude Code coupe descriptions et instructions à 2 048 caractères et casse une session sur un nom de 128 ; le levier `ack` fait lire le readme sur les 3 hosts et les 9 couples host × modèle testés.

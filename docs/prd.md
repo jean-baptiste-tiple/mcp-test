@@ -1,7 +1,7 @@
 # PRD — MCP Bench
 
 **Statut global :** 🔶 Draft
-**Dernière MAJ :** 2026-09-22
+**Dernière MAJ :** 2026-09-23
 
 ## 1. Vision
 
@@ -261,6 +261,81 @@ graph LR
 |----|-----------|------------|-------|----------|--------|
 | NFR-REST-01 | Traçabilité | Chaque fait mesuré cite le scénario et la requête SQL qui le produit | 100 % | N/A | 🔶 |
 
+### 4.5 Éprouver la maquette de la plateforme 🔶 Draft (E04, 2026-09-23)
+
+**Personas :** JB (consultant, testeur), Agent hôte
+**Objectif :** Prouver, sans host puis sur Claude Code, claude.ai et ChatGPT, que le contrat de la plateforme d'entreprise tient : six outils figés, code ctx exigé partout, routage des intentions par le serveur ; et chiffrer les sept mesures ouvertes du doc fonctionnel.
+
+#### Flow
+
+```mermaid
+sequenceDiagram
+    participant U as Utilisateur
+    participant A as Agent hôte
+    participant S as /api/proto/u/jb/mcp
+    U->>A: « Relance les devis en attente »
+    A->>S: acme_context(phrase)
+    S-->>A: ctx, étapes de ventes/relance_devis (score net)
+    A->>S: acme_call(sellsy.list_estimates, ctx)
+    S-->>A: devis en attente
+    A->>S: acme_call(mail.create_draft, ctx)
+    A->>U: « brouillons prêts, j'envoie ? »
+    U->>A: « Oui »
+    A->>S: acme_call(mail.send_draft, ctx, confirm)
+```
+
+#### Écrans
+
+| Écran | Référence UI | Description |
+|-------|-------------|-------------|
+| Aucun | N/A | Le host est l'interface ; données relues en SQL (Studio) |
+
+#### Exigences fonctionnelles
+
+| ID | Description | Priorité | Référence UI | Statut |
+|----|------------|----------|----------|--------|
+| FR-PROTO-01 | Endpoint `/api/proto/u/<utilisateur>/mcp`, stateless, identité = segment d'URL (ADR-003) ; le serveur du banc reste intact | Must | N/A | 🔶 |
+| FR-PROTO-02 | Exactement six outils `<préfixe>_context`, `_find`, `_read`, `_call`, `_write`, `_feedback` ; préfixe = celui de l'organisation de l'utilisateur (`acme`, `delta`) ; noms ASCII ≤ 64 ; descriptions en anglais < 1 000 caractères ; première phrase des cinq outils autres que context : « Requires the ctx code from <préfixe>_context; call it first. » ; schémas plats | Must | N/A | 🔶 |
+| FR-PROTO-03 | `ctx` requis sur tout outil sauf context ; code absent ou inconnu : refus qui dit d'appeler context ; version des règles changée : « context has changed, call <préfixe>_context again » | Must | N/A | 🔶 |
+| FR-PROTO-04 | `context(phrase?)` crée le code ctx et renvoie les blocs par priorité (code et candidats, étapes, personne, organisation, équipe, nouveautés, procédures utiles, documents récents, pointeurs par sujet) dans 20 000 caractères, coupés par la fin | Must | N/A | 🔶 |
+| FR-PROTO-05 | Routage lexical sans embedding : plein texte Postgres (français, unaccent) et pg_trgm sur phrases déclencheuses, titres, résumés, vocabulaire de l'organisation, bonus équipe et usage ; score 0–1 ; étapes servies seulement au-dessus du seuil avec un écart net sur le deuxième ; sinon candidats et consigne de demander | Must | N/A | 🔶 |
+| FR-PROTO-06 | `find` : trois candidats avec score (procédures, pages, tableaux, fonctions) | Must | N/A | 🔶 |
+| FR-PROTO-07 | `read` : nœud par chemin, en plan, par section, ou depuis une révision ; contrat d'une fonction | Must | N/A | 🔶 |
+| FR-PROTO-08 | `write` : opérations par section adressée par son titre, brouillon puis publication, refus d'une révision périmée avec l'état actuel ; publier le guide incrémente la version des règles | Must | N/A | 🔶 |
+| FR-PROTO-09 | `call` : fonction du catalogue, arguments validés contre son schéma, droits de l'équipe (refus nommant le responsable), confirmation en deux temps des fonctions sensibles | Must | N/A | 🔶 |
+| FR-PROTO-10 | Tableaux derrière `call` : `table.rows`, `table.aggregate`, `table.write` (set, clear, verified_empty ; null refusé avec la raison ; garde de révision), `table.claim`, `table.release`, `table.schema` | Must | N/A | 🔶 |
+| FR-PROTO-11 | Connecteurs simulés, déterministes, sans réseau : `sellsy.list_estimates`, `sellsy.get_estimate`, `mail.create_draft`, `mail.send_draft` (sensible), `slack.post_message` ; sondes de mesure `probe.payload`, `probe.echo` | Must | N/A | 🔶 |
+| FR-PROTO-12 | `feedback` : un numéro de ticket | Must | N/A | 🔶 |
+| FR-PROTO-13 | Même contenu en `content` texte et en `structuredContent` pour chaque résultat | Must | N/A | 🔶 |
+| FR-PROTO-14 | Journal de chaque requête : ctx, utilisateur, équipe, méthode, outil, fonction ou chemin, taille des arguments et du résultat, erreur, durée, user-agent | Must | N/A | 🔶 |
+| FR-PROTO-15 | Données fictives : Acme Énergies (Ventes, Support, Conseil ; quatre utilisateurs ; une dizaine de procédures dont des paires voisines ; une page longue à sections ; tableau `ventes/suivi_prospects` avec file de travail) et Delta (une équipe, un utilisateur, trois procédures d'un autre domaine) ; aucun nom de client réel | Must | N/A | 🔶 |
+| FR-PROTO-16 | Capacité `prompts` (prompts suggérés tirés des procédures) et variantes de mesure : domaines dans la description de context, ton servi par context | Should | N/A | 🔶 |
+| FR-PROTO-17 | `docs/bench/results-proto.md` : grille par host et modèle, golden queries, frictions, chiffres des sept mesures, changements proposés aux deux docs d'architecture | Must | N/A | 🔶 |
+
+**Critères d'acceptation (preuves sans host, Vitest + InMemoryTransport) :**
+- [ ] FR-PROTO-03 : Given un outil autre que context When appelé sans ctx, avec un ctx inconnu ou le ctx d'un autre utilisateur Then `isError` avec un message qui dit d'appeler `<préfixe>_context`
+- [ ] FR-PROTO-03 : Given un ctx valide When la version des règles de l'organisation change Then l'appel suivant reçoit « context has changed, call <préfixe>_context again »
+- [ ] FR-PROTO-04 : Given un contexte complet When rendu Then ≤ 20 000 caractères ; avec un budget réduit, les blocs de fin disparaissent d'abord et le bloc code reste
+- [ ] FR-PROTO-05 : Given le jeu de phrases de test When routé Then ≥ 95 % de bonnes reconnaissances parmi les phrases au-dessus du seuil, et aucune étape d'une procédure P servie pour une phrase voisine de P
+- [ ] FR-PROTO-13 : Given chaque outil When il répond sans erreur Then `structuredContent.text === content[0].text`
+- [ ] FR-PROTO-08/10 : Given une révision périmée When write Then refus avec l'état actuel ; Given `null` dans table.write Then refus avec la raison
+- [ ] FR-PROTO-09 : Given une fonction sensible sans confirm Then récapitulatif, rien exécuté ; Given une fonction hors droits Then refus nommant le responsable
+- [ ] FR-PROTO-02 : Given les listes d'outils d'Acme et de Delta Then noms ≤ 64 ASCII, descriptions < 1 000, première phrase conforme, aucun nom commun aux deux listes
+
+**Critères d'acceptation (hosts, protocole E01) :**
+- [ ] Given une nouvelle conversation sur chaque host When l'utilisateur fait une demande de travail sans nommer le connecteur (sauf ChatGPT : `@`) Then context est le premier appel au journal
+- [ ] Given les golden queries When jouées Then bonne procédure, deux appels avant la première action, accord demandé avant tout envoi (journal : `mail.send_draft` sans puis avec confirm)
+- [ ] Given une demande sans procédure When jouée Then find, read puis call avec des arguments valides
+- [ ] Given Acme et Delta branchés ensemble When une demande propre à chacun Then le bon préfixe est appelé
+
+#### Exigences non-fonctionnelles
+
+| ID | Catégorie | Description | Cible | Référence UI | Statut |
+|----|-----------|------------|-------|----------|--------|
+| NFR-PROTO-01 | Coût | Zéro IA serveur, zéro embedding, zéro appel réseau sortant | 0 | N/A | 🔶 |
+| NFR-PROTO-02 | Latence | context avec routage | < 1,5 s p50 sur Vercel | N/A | 🔶 |
+| NFR-PROTO-03 | Traçabilité | Chaque chiffre de results-proto.md cite la requête du journal qui le produit | 100 % | N/A | 🔶 |
+
 ## 5. Modèle de données (résumé)
 
 ```mermaid
@@ -314,6 +389,7 @@ erDiagram
 | bench_scenarios | 4.1, 4.3 | Variables de niveau serveur et levier readme ; un seul actif |
 | bench_tools | 4.1, 4.2, 4.3 | Variables de niveau tool ; les sondes sont des lignes avec un `handler` |
 | bench_events | 4.2, 4.3, 4.4 | Mesure : une ligne par requête JSON-RPC |
+| schéma `proto` (13 tables) | 4.5 | Maquette de la plateforme ; détail en architecture §9 |
 
 ## 6. Epics
 
@@ -322,6 +398,7 @@ erDiagram
 | E01 | Banc MCP stateless | 4.1, 4.2, 4.3, 4.4 | P0 | — | 🟢 |
 | E02 | Push listChanged (transport stateful) | 4.1 | P1 | E01 | ⬜ |
 | E03 | OAuth Supabase comme variable de test | 4.2 | P2 | E01 | ⬜ |
+| E04 | Maquette de la plateforme MCP d'entreprise | 4.5 | P0 | E01 | 🟢 |
 
 ## 7. Hors scope
 
