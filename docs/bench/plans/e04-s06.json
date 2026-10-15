@@ -1,0 +1,170 @@
+{
+  "name": "e04-s06",
+  "mcpConfig": ".bench/cc/mcp.json",
+  "goldenQueries": "docs/proto-golden-queries.md",
+  "models": [
+    "claude-opus-5-5",
+    "claude-sonnet-5",
+    "claude-fable-5-1"
+  ],
+  "trials": 1,
+  "permission": "bypass",
+  "timeoutMs": 600000,
+  "prompts": [
+    {
+      "id": "D1",
+      "turns": [
+        "@D1",
+        "Oui, envoie-les.",
+        "Write a structured friction report about the Acme and Delta connectors: step by step what you did, where you hesitated or failed, what you think caused it, and a minimal reproduction for each issue. Mention anything about tool descriptions, the context result or the ctx code that was unclear, truncated or missing."
+      ]
+    },
+    {
+      "id": "D2"
+    },
+    {
+      "id": "D3"
+    },
+    {
+      "id": "D4",
+      "turns": [
+        {
+          "text": "@D4",
+          "before": "pnpm proto:set acme prospects reset"
+        }
+      ]
+    },
+    {
+      "id": "D5",
+      "turns": [
+        {
+          "text": "@D5",
+          "before": "pnpm proto:set acme prospects reset"
+        }
+      ]
+    },
+    {
+      "id": "D6"
+    },
+    {
+      "id": "I1"
+    },
+    {
+      "id": "I2"
+    },
+    {
+      "id": "I3"
+    },
+    {
+      "id": "I4"
+    },
+    {
+      "id": "N1"
+    },
+    {
+      "id": "N2"
+    },
+    {
+      "id": "N3"
+    },
+    {
+      "id": "X1"
+    },
+    {
+      "id": "X2"
+    },
+    {
+      "id": "X3"
+    },
+    {
+      "id": "M1-D1",
+      "turns": [
+        "@D1"
+      ],
+      "extraArgs": [
+        "--append-system-prompt",
+        "Quand une demande concerne mon travail (clients, devis, prospection, support, reporting), commence par le connecteur « Acme » : appelle son outil de contexte, puis suis la procédure qu'il renvoie. Si aucune procédure ne correspond, dis-le au lieu de deviner."
+      ]
+    },
+    {
+      "id": "M1-I2",
+      "turns": [
+        "@I2"
+      ],
+      "extraArgs": [
+        "--append-system-prompt",
+        "Quand une demande concerne mon travail (clients, devis, prospection, support, reporting), commence par le connecteur « Acme » : appelle son outil de contexte, puis suis la procédure qu'il renvoie. Si aucune procédure ne correspond, dis-le au lieu de deviner."
+      ]
+    },
+    {
+      "id": "M2",
+      "turns": [
+        "/mcp__acme__relance_devis"
+      ]
+    },
+    {
+      "id": "M3-10000",
+      "turns": [
+        "Appelle la fonction probe.payload avec chars = 10000, puis donne-moi le dernier code [C:proto:…] que tu vois."
+      ]
+    },
+    {
+      "id": "M3-25000",
+      "turns": [
+        "Appelle la fonction probe.payload avec chars = 25000, puis donne-moi le dernier code [C:proto:…] que tu vois."
+      ]
+    },
+    {
+      "id": "M3-50000",
+      "turns": [
+        "Appelle la fonction probe.payload avec chars = 50000, puis donne-moi le dernier code [C:proto:…] que tu vois."
+      ]
+    },
+    {
+      "id": "M3-100000",
+      "turns": [
+        "Appelle la fonction probe.payload avec chars = 100000, puis donne-moi le dernier code [C:proto:…] que tu vois."
+      ]
+    },
+    {
+      "id": "M3-200000",
+      "turns": [
+        "Appelle la fonction probe.payload avec chars = 200000, puis donne-moi le dernier code [C:proto:…] que tu vois."
+      ]
+    },
+    {
+      "id": "M4-2000",
+      "turns": [
+        "Écris un texte d'environ 2000 caractères (répète le paragraphe de la méthode d'étude) et passe-le à probe.echo."
+      ]
+    },
+    {
+      "id": "M4-8000",
+      "turns": [
+        "Écris un texte d'environ 8000 caractères (répète le paragraphe de la méthode d'étude) et passe-le à probe.echo."
+      ]
+    },
+    {
+      "id": "M4-20000",
+      "turns": [
+        "Écris un texte d'environ 20000 caractères (répète le paragraphe de la méthode d'étude) et passe-le à probe.echo."
+      ]
+    },
+    {
+      "id": "M4-50000",
+      "turns": [
+        "Écris un texte d'environ 50000 caractères (répète le paragraphe de la méthode d'étude) et passe-le à probe.echo."
+      ]
+    },
+    {
+      "id": "M5",
+      "turns": [
+        "@D3",
+        {
+          "text": "Et le devis de la salle des sports ?",
+          "before": "pnpm proto:set acme rules bump"
+        }
+      ]
+    }
+  ]
+}

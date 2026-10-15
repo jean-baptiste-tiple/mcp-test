@@ -22,6 +22,9 @@ playwright-report/
 .playwright-mcp/
 coverage/
 
+# Runs des campagnes Claude Code (pnpm bench:cc) : flux bruts et config MCP locale
+.bench/
+
 # OS
 .DS_Store
 Thumbs.db

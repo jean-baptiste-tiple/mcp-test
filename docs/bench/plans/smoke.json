@@ -1,0 +1,16 @@
+{
+  "name": "smoke",
+  "mcpConfig": ".bench/cc/mcp.json",
+  "goldenQueries": "docs/proto-golden-queries.md",
+  "models": [
+    "claude-sonnet-5"
+  ],
+  "trials": 1,
+  "permission": "bypass",
+  "timeoutMs": 300000,
+  "prompts": [
+    {
+      "id": "I3"
+    }
+  ]
+}

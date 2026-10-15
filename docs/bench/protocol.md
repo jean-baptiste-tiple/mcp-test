@@ -217,7 +217,7 @@ Maquette de la plateforme d'entreprise : `https://mcp-test-navy.vercel.app/api/p
 1. `pnpm proto:seed` avant une campagne : remet Acme et Delta à zéro (journal, ctx, brouillons compris). Jamais pendant.
    Entre deux hosts (ou deux modèles), sans perdre le journal : `pnpm proto:set acme prospects reset` remet le tableau `ventes/suivi_prospects` dans l'état du seed (D4 consomme la file « à traiter », D5 en agrège les chiffres).
 2. Deux connecteurs par host, branchés ensemble : **Acme** `…/api/proto/u/jb/mcp` et **Delta** `…/api/proto/u/jb-delta/mcp`. Noms de connecteur : « Acme » et « Delta ».
-   - Claude Code : fichier `--mcp-config` avec deux serveurs HTTP `acme` et `delta`, `--strict-mcp-config`, session neuve par prompt (`claude -p`), deuxième tour par `--resume <session_id>`.
+   - Claude Code : fichier `--mcp-config` avec deux serveurs HTTP `acme` et `delta`, `--strict-mcp-config`, session neuve par prompt (`claude -p`), deuxième tour par `--resume <session_id>`. Le tout est outillé par `pnpm bench:cc` (`docs/bench/harnais.md`, plan `docs/bench/plans/e04-s06.json`).
    - claude.ai : Paramètres → Connecteurs → Ajouter un connecteur personnalisé (fait avec JB). Premier message au moins 12 s après le chargement de la page.
    - ChatGPT : Paramètres → Connecteurs → Mode développeur → Créer, sans auth (fait avec JB). Sélection par `@Acme` ou `@Delta`.
 3. Aucun prompt ne nomme un connecteur (sauf `@` sur ChatGPT). Le serveur ne voit pas le modèle : noter l'heure de début de chaque conversation et le modèle.

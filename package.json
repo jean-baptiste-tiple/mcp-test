@@ -19,6 +19,7 @@
     "oauth:seed": "node scripts/oauth-seed.mjs",
     "oauth:member": "node scripts/oauth-member.mjs",
     "oauth:admin": "node scripts/oauth-admin.mjs",
+    "bench:cc": "node scripts/bench-cc.mjs",
     "db:types": "supabase gen types typescript --linked --schema public > src/types/database.ts",
     "db:migrate": "supabase migration new",
     "db:push": "supabase db push"

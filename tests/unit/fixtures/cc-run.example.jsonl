@@ -1,0 +1,19 @@
+{"type":"harness_run","run":"D1__claude-sonnet-5__t1","prompt":"D1","model":"claude-sonnet-5","trial":1,"turns":2,"plan":"exemple","permission":"bypass","started_at":"2026-10-15T08:00:00.000Z"}
+{"type":"harness_turn","turn":1,"text":"Relance les devis en attente.","command":"claude -p --output-format stream-json --verbose --model claude-sonnet-5 --tools \"\" --mcp-config mcp.json --strict-mcp-config --setting-sources project --settings \"{\\\"claudeMdExcludes\\\":[\\\"**/CLAUDE.md\\\",\\\"**/CLAUDE.local.md\\\",\\\"**/.claude/rules/**\\\"]}\" --permission-mode bypassPermissions","started_at":"2026-10-15T08:00:00.100Z"}
+{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000001","model":"claude-sonnet-5","claude_code_version":"2.1.280","permissionMode":"bypassPermissions","mcp_servers":[{"name":"acme","status":"connected"},{"name":"delta","status":"connected"}]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_a","name":"mcp__acme__acme_context","input":{"phrase":"Relance les devis en attente."}}]},"session_id":"00000000-0000-4000-8000-000000000001"}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_a","content":[{"type":"text","text":"ctx: TEST-0001"}]}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_b","name":"mcp__acme__acme_call","input":{"ctx":"TEST-0001","function":"sellsy.list_estimates","arguments":{"status":"sent"}}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_b","content":[{"type":"text","text":"4 devis"}]}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_c","name":"mcp__acme__acme_call","input":{"ctx":"TEST-0001","function":"mail.create_draft","arguments":{"to":"contact@exemple.test"}}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_c","is_error":true,"content":[{"type":"text","text":"Unknown recipient"}]}]}}
+ligne non JSON laissée par un host : l'analyseur doit l'ignorer
+{"type":"assistant","message":{"content":[{"type":"text","text":"Deux brouillons prêts. Je les envoie ?"}]}}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":4000,"total_cost_usd":0.01,"permission_denials":[],"usage":{"input_tokens":10,"output_tokens":100,"cache_read_input_tokens":1000,"cache_creation_input_tokens":500},"result":"Deux brouillons prêts. Je les envoie ?","session_id":"00000000-0000-4000-8000-000000000001"}
+{"type":"harness_turn_end","turn":1,"exit_code":0,"stderr":"","ended_at":"2026-10-15T08:00:05.000Z"}
+{"type":"harness_turn","turn":2,"text":"Oui, envoie-les.","command":"claude -p … --resume 00000000-0000-4000-8000-000000000001","started_at":"2026-10-15T08:00:06.000Z"}
+{"type":"system","subtype":"init","session_id":"00000000-0000-4000-8000-000000000001","model":"claude-sonnet-5","claude_code_version":"2.1.280","mcp_servers":[{"name":"acme","status":"connected"},{"name":"delta","status":"connected"}]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_d","name":"mcp__acme__acme_call","input":{"ctx":"TEST-0001","function":"mail.send_draft","arguments":{"id":"BR-1"},"confirm":true}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_d","content":[{"type":"text","text":"sent"}]}]}}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":2500,"total_cost_usd":0.005,"permission_denials":[{"tool_name":"mcp__acme__acme_write"}],"usage":{"input_tokens":5,"output_tokens":50,"cache_read_input_tokens":2000,"cache_creation_input_tokens":0},"result":"Envoyé. — ton assistant Acme","session_id":"00000000-0000-4000-8000-000000000001"}
+{"type":"harness_turn_end","turn":2,"exit_code":0,"stderr":"","ended_at":"2026-10-15T08:00:09.000Z"}
