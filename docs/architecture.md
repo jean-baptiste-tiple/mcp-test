@@ -227,8 +227,12 @@ Phase 1 : aucune (ADR-002) ; `/api/mcp` reste public. E03 : serveur auth-test s�
 ## 8. Infrastructure & Déploiement
 
 - **Hébergement :** Vercel, projet `mcp-test` (https://mcp-test-navy.vercel.app), auto-deploy sur push de `main`.
-- **Supabase :** Cloud, projet `nwdmkehnxvqyxddgogtu`, région par défaut.
-- **CI/CD :** GitHub Actions `pnpm build` uniquement (existant). Migrations poussées en local (`pnpm db:push`), pas de workflow migrations (écarté : rien ne casse sans lui aujourd'hui).
+- **Supabase :** Cloud, projet `nwdmkehnxvqyxddgogtu`, région par défaut. **Partagé avec `C:\apps\oto-pkg`**, qui s'en sert de base de tests (décision de JB du 2026-10-15 : garder le partage, avec la garde ci-dessous).
+- **Garde du projet partagé** (incident du 26/09/2026 : `DROP TABLE public.bench_* RESTRICT` puis `supabase migration repair --status reverted` des versions de ce dépôt, lus dans `pg_stat_statements` ; serveur bench en panne jusqu'au 15/10) :
+  - à ce dépôt : `public.bench_*`, les schémas `proto` et `oauth_test`, la liste `pgrst.db_schemas` posée par `20260923090100_proto_expose.sql` ; à oto-pkg : le schéma `platform`. Aucun des deux dépôts ne supprime, ne modifie ni ne « nettoie » un objet de l'autre, ni par SQL, ni par le tableau de bord, ni par un connecteur Supabase ;
+  - l'historique `supabase_migrations.schema_migrations` est unique pour le projet et ne contient plus que les versions d'oto-pkg. Depuis ce dépôt : **jamais `supabase db push`, `pnpm db:push`, `db reset` ni `migration repair`** sur ce projet. Le push rejouerait `proto` (non idempotent) ou toucherait les versions d'oto-pkg ;
+  - une migration de ce dépôt s'applique en SQL idempotent, dans une transaction, sans écrire dans l'historique, puis `notify pgrst, 'reload schema'` (recréation du bench le 2026-10-15 : `platform` vérifié intact, 29 tables avant et après).
+- **CI/CD :** GitHub Actions `pnpm build` uniquement (existant). Pas de workflow migrations (écarté : rien ne casse sans lui aujourd'hui) ; migrations appliquées selon la garde ci-dessus.
 - **Environnements :** local (`.env.local`) et production. Pas de staging.
 - **Variables Vercel (production) :** `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET` (S03). `NEXT_PUBLIC_SITE_URL` et `MCP_RESOURCE_URL` ne sont lues par aucun code en phase 1 : E03 ne les lit pas non plus : tout se déduit de l'hôte appelé (§10).
 - **Préversion E03 :** branche `e03-oauth`, deux domaines `*.vercel.app` rattachés à la branche, exception de protection, variables de préversion (§10.8).
@@ -438,7 +442,7 @@ src/types/oauth-test-database.ts
 - Branche `e03-oauth`, worktree `C:\apps\mcp-test-e03`, préversion Vercel. Domaines `mcp-test-acme.vercel.app` et `mcp-test-e03-delta.vercel.app` rattachés à la branche (ajoutés le 2026-09-23 ; `mcp-test-delta.vercel.app` appartient à une autre équipe). Protection du projet : en « Standard » (`all_except_custom_domains`) comme en « préversions seulement » (`preview`), un domaine rattaché à une branche reste protégé (mesuré le 2026-09-23 : 401 « Protected deployment », 302 vers le SSO) ; l'API du projet n'expose pas les exceptions de protection → Vercel Authentication désactivée sur le projet (`ssoProtection: null`, la production étant déjà publique), à remettre après la campagne.
 - Variables de préversion posées le 2026-09-23 par la CLI Vercel (valeurs lues dans `.env.local`, jamais affichées) : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`, `BENCH_ACK_SECRET`.
 - Supabase (JB, chaque changement annoncé) : adresse de site = hôte Acme (la page de consentement y vit), URLs de redirection des deux hôtes, serveur OAuth et enregistrement dynamique (déjà actifs), comptes JB et alias par le seed, durée des jetons courte pendant la preuve 8 puis 3 600 s.
-- Migrations : `supabase db push --db-url` (jeton de la CLI révoqué), à un moment convenu avec JB.
+- Migrations : `supabase db push --db-url` (jeton de la CLI révoqué), à un moment convenu avec JB. Depuis le partage du projet avec oto-pkg, plus de `db push` : voir la garde du projet partagé (§ Déploiement).
 - Fusion dans `main` avec l'accord de JB, une fois E04 terminé.
 
 ## Invariants

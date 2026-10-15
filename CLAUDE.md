@@ -92,6 +92,7 @@ Activé pour tout produit MCP-first. Voir `.claude/starters/mcp/README.md` pour 
 - **RLS activé sur toute table.** Pas d'exception sans ADR documenté. Le `service_role` client est interdit sauf cas explicitement documenté.
 - **Migrations versionnées.** Chaque changement DB = `pnpm db:migrate [nom]` → fichier SQL dans `supabase/migrations/`. Jamais de modification en direct. CI auto-deploy via `.github/workflows/supabase-migrations.yml`.
 - **Auth vérifiée dans chaque Server Action** (pas seulement le middleware).
+- **Projet Supabase partagé avec oto-pkg** (ce dépôt) : jamais `supabase db push`, `db reset` ni `migration repair`, jamais toucher au schéma `platform` ; une migration s'applique en SQL idempotent hors historique. Règle complète : `docs/architecture.md`, garde du projet partagé.
 
 ## Règles MCP (si le produit expose un serveur MCP)
 
