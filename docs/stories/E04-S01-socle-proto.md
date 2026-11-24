@@ -61,8 +61,8 @@ Pose tout ce dont les stories suivantes ont besoin : le schéma `proto` complet,
 - `pnpm db:push`, puis `pnpm proto:seed`
 
 ### Patterns à suivre
-- `.claude/conventions/mcp-patterns.md` §2.1, §3, §4, §7, §10 ; handlers bas niveau comme `src/mcp/server.ts` (la garde ctx doit rendre notre message, pas l'erreur de validation du SDK)
-- `.claude/conventions/database-patterns.md`, `supabase-patterns.md`, `security-patterns.md`
+- `.method/conventions/mcp-patterns.md` §2.1, §3, §4, §7, §10 ; handlers bas niveau comme `src/mcp/server.ts` (la garde ctx doit rendre notre message, pas l'erreur de validation du SDK)
+- `.method/conventions/database-patterns.md`, `supabase-patterns.md`, `security-patterns.md`
 - `coding-standards.md` §Surfaces nouvelles : chaque fichier ouvre sur ce qui casse sans lui
 
 ## Tests attendus

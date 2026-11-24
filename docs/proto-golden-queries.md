@@ -1,6 +1,6 @@
 # Golden Queries — serveur proto (E04)
 
-> Jeu de prompts du serveur proto `/api/proto/u/<utilisateur>/mcp`, créé depuis `.claude/templates/mcp-golden-queries.tmpl.md`. Règles d'usage : `.claude/conventions/mcp-patterns.md` §8. Déroulé des campagnes : `docs/bench/protocol.md`, section « Serveur proto ».
+> Jeu de prompts du serveur proto `/api/proto/u/<utilisateur>/mcp`, créé depuis `.method/templates/mcp-golden-queries.tmpl.md`. Règles d'usage : `.method/conventions/mcp-patterns.md` §8. Déroulé des campagnes : `docs/bench/protocol.md`, section « Serveur proto ».
 > Connecteurs branchés ENSEMBLE dans chaque host : **Acme** (`/api/proto/u/jb/mcp`, outils `acme_*`) et **Delta** (`/api/proto/u/jb-delta/mcp`, outils `delta_*`). Aucun prompt ne nomme un connecteur, sauf sur ChatGPT, qui exige `@`.
 > L'attendu se lit au journal (`proto.journal`, requête R2), jamais dans le récit du modèle. « Avant la première action » : appels avant le premier `call` qui écrit ou envoie.
 

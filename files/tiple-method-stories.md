@@ -1,7 +1,7 @@
 # Epics & Stories — Tiple Method Template
 
 > Découpage en stories exécutables par Claude Code.
-> Chaque story peut être implémentée avec `/tm-dev` (ou directement).
+> Chaque story peut être implémentée avec `/dev` (ou directement).
 > Les stories sont ordonnées pour exécution séquentielle autonome.
 
 ---
@@ -19,7 +19,7 @@ Créer toute l'arborescence de dossiers avec les `.gitkeep` là où les dossiers
 **Fichiers à créer :**
 - `.gitignore`
 - `.env.example`
-- `docs/brief.md` (stub : 3 lignes, pointe vers `/tm-plan`)
+- `docs/brief.md` (stub : 3 lignes, pointe vers `/plan`)
 - `docs/prd.md` (stub)
 - `docs/architecture.md` (stub)
 - `docs/changelog.md` (structure vide avec header + format d'entrée en exemple commenté)
@@ -30,7 +30,7 @@ Créer toute l'arborescence de dossiers avec les `.gitkeep` là où les dossiers
 - `docs/epics/.gitkeep`
 - `docs/stories/.gitkeep`
 - `docs/decisions/.gitkeep`
-- `.claude/sprint/status.md` (template sprint vide avec structure)
+- `.method/sprint/status.md` (template sprint vide avec structure)
 - `tests/unit/.gitkeep`
 - `tests/integration/.gitkeep`
 - `tests/e2e/.gitkeep`
@@ -64,7 +64,7 @@ Créer le CLAUDE.md < 150 lignes avec toutes les sections décrites dans le PRD 
 - [ ] Workflow quotidien (résumé 10 lignes)
 - [ ] Process évolution PRD (résumé 7 étapes)
 - [ ] Process nouveau composant (4 étapes)
-- [ ] Section Conventions (pointe vers .claude/conventions/)
+- [ ] Section Conventions (pointe vers .method/conventions/)
 - [ ] Aucune règle n'est dupliquée — renvoie vers les fichiers pour le détail
 
 ---
@@ -187,9 +187,9 @@ Créer les fichiers de code source minimaux pour que le projet démarre. Le midd
 Les 3 templates de planification. Doivent être suffisamment détaillés pour qu'un LLM produise un bon document, mais pas verbeux. L'architecture template est pré-rempli avec les invariants/flexible Next.js+Supabase.
 
 **Fichiers à créer :**
-- `.claude/templates/brief.tmpl.md`
-- `.claude/templates/prd.tmpl.md`
-- `.claude/templates/architecture.tmpl.md`
+- `.method/templates/brief.tmpl.md`
+- `.method/templates/prd.tmpl.md`
+- `.method/templates/architecture.tmpl.md`
 
 **Acceptance Criteria :**
 - [ ] brief.tmpl.md a les 7 sections (Problème, Solution, Users, Scope IN/OUT, Contraintes, Métriques, Risques)
@@ -211,9 +211,9 @@ Les 3 templates de planification. Doivent être suffisamment détaillés pour qu
 Les 3 templates d'exécution. La story template est le plus critique — elle doit contenir tout ce que Claude Code a besoin pour implémenter de manière autonome.
 
 **Fichiers à créer :**
-- `.claude/templates/epic.tmpl.md`
-- `.claude/templates/story.tmpl.md`
-- `.claude/templates/adr.tmpl.md`
+- `.method/templates/epic.tmpl.md`
+- `.method/templates/story.tmpl.md`
+- `.method/templates/adr.tmpl.md`
 
 **Acceptance Criteria :**
 - [ ] epic.tmpl.md a : ID, Priorité, Dépendances, PRD Refs, Objectif, Scope IN/OUT, Stories prévues, Design requis
@@ -235,11 +235,11 @@ Les 3 templates d'exécution. La story template est le plus critique — elle do
 Les 5 checklists. Chaque item est une checkbox actionnable. La code-review checklist doit inclure des points spécifiques Next.js + Supabase.
 
 **Fichiers à créer :**
-- `.claude/checklists/readiness-gate.md` — 4 catégories : Documents, Cohérence, Conventions, Infra minimale
-- `.claude/checklists/story-ready.md` — Definition of Ready
-- `.claude/checklists/story-done.md` — Definition of Done (inclut tests)
-- `.claude/checklists/code-review.md` — 7 catégories : DRY, Qualité, Sécurité, Tests, Design, Architecture, Documentation + points Next.js/Supabase spécifiques
-- `.claude/checklists/prd-evolution.md` — 4 catégories : Identification, Impact cascade, Compatibility, Traçabilité
+- `.method/checklists/readiness-gate.md` — 4 catégories : Documents, Cohérence, Conventions, Infra minimale
+- `.method/checklists/story-ready.md` — Definition of Ready
+- `.method/checklists/story-done.md` — Definition of Done (inclut tests)
+- `.method/checklists/code-review.md` — 7 catégories : DRY, Qualité, Sécurité, Tests, Design, Architecture, Documentation + points Next.js/Supabase spécifiques
+- `.method/checklists/prd-evolution.md` — 4 catégories : Identification, Impact cascade, Compatibility, Traçabilité
 
 **Acceptance Criteria :**
 - [ ] Chaque checklist est une liste de `- [ ]` prête à être cochée
@@ -261,11 +261,11 @@ Les 5 checklists. Chaque item est une checkbox actionnable. La code-review check
 Les 5 fichiers de conventions, pré-remplis avec les patterns Next.js + Supabase détaillés dans le PRD (section 3.5). C'est la story la plus lourde en contenu.
 
 **Fichiers à créer :**
-- `.claude/conventions/tech-stack.md` — Tableau complet de la stack avec versions et justifications
-- `.claude/conventions/coding-standards.md` — Naming, structure src/, Server Components vs Client, Server Actions pattern, Supabase client rules, DRY, imports, error handling
-- `.claude/conventions/testing-strategy.md` — Unit (Vitest), Integration (RTL), E2E (Playwright), mock Supabase, non-régression
-- `.claude/conventions/component-registry.md` — Structure vide pré-seedée (cn + Database types), instructions d'utilisation
-- `.claude/conventions/api-patterns.md` — Server Actions standard, ActionResult type, Form pattern (Zod→RHF→Action→revalidate), Fetch pattern (Server Components), Auth pattern (middleware + action), Error handling codes
+- `.method/conventions/tech-stack.md` — Tableau complet de la stack avec versions et justifications
+- `.method/conventions/coding-standards.md` — Naming, structure src/, Server Components vs Client, Server Actions pattern, Supabase client rules, DRY, imports, error handling
+- `.method/conventions/testing-strategy.md` — Unit (Vitest), Integration (RTL), E2E (Playwright), mock Supabase, non-régression
+- `.method/conventions/component-registry.md` — Structure vide pré-seedée (cn + Database types), instructions d'utilisation
+- `.method/conventions/api-patterns.md` — Server Actions standard, ActionResult type, Form pattern (Zod→RHF→Action→revalidate), Fetch pattern (Server Components), Auth pattern (middleware + action), Error handling codes
 
 **Acceptance Criteria :**
 - [ ] tech-stack.md a le tableau complet de la section 2 de l'architecture
@@ -283,75 +283,75 @@ Les 5 fichiers de conventions, pré-remplis avec les patterns Next.js + Supabase
 
 ## E06 — Slash Commands
 
-### E06-S01 — Commande de cadrage (/tm-plan)
+### E06-S01 — Commande de cadrage (/plan)
 
 **Status :** 🟢 Ready
 **Estimation :** L
 
 **Ce qu'il faut faire :**
-Créer la commande `/tm-plan` qui fusionne l'ancien brief + PRD + architecture + design system + epic/story + gate en une seule conversation fluide. C'est la commande la plus longue mais elle est utilisée une seule fois par projet.
+Créer la commande `/plan` qui fusionne l'ancien brief + PRD + architecture + design system + epic/story + gate en une seule conversation fluide. C'est la commande la plus longue mais elle est utilisée une seule fois par projet.
 
 **Fichiers à créer :**
-- `.claude/commands/tm-plan.md` — Cadrage complet en conversation fluide (brief → PRD → architecture → design system → stories → gate)
+- `.claude/skills/plan/SKILL.md` — Cadrage complet en conversation fluide (brief → PRD → architecture → design system → stories → gate)
 
 **Acceptance Criteria :**
 - [ ] La commande guide une conversation fluide, pas un formulaire étape par étape
-- [ ] Phase 1 (brief) : pose des questions sur le problème, les users, le scope → génère docs/brief.md via .claude/templates/brief.tmpl.md
-- [ ] Phase 2 (PRD) : transforme le brief en exigences numérotées FR/NFR → génère docs/prd.md via .claude/templates/prd.tmpl.md
-- [ ] Phase 3 (architecture) : modèle de données, Server Actions, RLS → génère docs/architecture.md via .claude/templates/architecture.tmpl.md
+- [ ] Phase 1 (brief) : pose des questions sur le problème, les users, le scope → génère docs/brief.md via .method/templates/brief.tmpl.md
+- [ ] Phase 2 (PRD) : transforme le brief en exigences numérotées FR/NFR → génère docs/prd.md via .method/templates/prd.tmpl.md
+- [ ] Phase 3 (architecture) : modèle de données, Server Actions, RLS → génère docs/architecture.md via .method/templates/architecture.tmpl.md
 - [ ] Phase 4 (design system) : tokens, composants réutilisables, patterns UI → génère docs/design/system.md
 - [ ] Phase 5 (stories) : découpe en epics et stories implémentables → génère docs/epics/*.md et docs/stories/*.md via templates
-- [ ] Phase 6 (gate) : passe .claude/checklists/readiness-gate.md, vérifie la cohérence entre tous les docs
+- [ ] Phase 6 (gate) : passe .method/checklists/readiness-gate.md, vérifie la cohérence entre tous les docs
 - [ ] Inclut des best practices à chaque phase (quantifier la douleur, AC mesurables, pas d'optimisation prématurée, tokens-first pour le design)
 - [ ] Les transitions entre phases sont naturelles, pas des "Étape 1 terminée, passons à l'étape 2"
 
 ---
 
-### E06-S02 — Commandes d'exécution (/tm-dev, /tm-review)
+### E06-S02 — Commandes d'exécution (/dev, /revue)
 
 **Status :** 🟢 Ready
 **Estimation :** L
 
 **Ce qu'il faut faire :**
-Les 2 commandes d'exécution quotidiennes. `/tm-dev` est la commande la plus critique — elle supporte deux modes : story (implémentation planifiée) et libre (bugfix, amélioration, refacto). `/tm-review` fait la code review avec checklist et review adversariale.
+Les 2 commandes d'exécution quotidiennes. `/dev` est la commande la plus critique — elle supporte deux modes : story (implémentation planifiée) et libre (bugfix, amélioration, refacto). `/revue` fait la code review avec checklist et review adversariale.
 
 **Fichiers à créer :**
-- `.claude/commands/tm-dev.md` — Implémente une story OU un bugfix/amélioration en mode libre, avec changelog à chaque commit
-- `.claude/commands/tm-review.md` — Code review avec checklist + review adversariale + corrections
+- `.claude/skills/dev/SKILL.md` — Implémente une story OU un bugfix/amélioration en mode libre, avec changelog à chaque commit
+- `.claude/skills/revue/SKILL.md` — Code review avec checklist + review adversariale + corrections
 
 **Acceptance Criteria :**
-- [ ] /tm-dev accepte : identifiant de story, "next", ou rien (mode libre)
+- [ ] /dev accepte : identifiant de story, "next", ou rien (mode libre)
 - [ ] Mode story : lit story → story-ready checklist → design → architecture → design system → component-registry → coding-standards → api-patterns
 - [ ] Mode libre : l'utilisateur décrit le bug/amélioration → Claude lit le contexte existant → propose un plan → implémente
-- [ ] /tm-dev implémente dans l'ordre : migration → schemas Zod → Server Actions + tests → UI + tests → page + tests integ → e2e
-- [ ] /tm-dev ajoute une entrée dans docs/changelog.md À CHAQUE COMMIT (pas à la fin)
-- [ ] /tm-dev vérifie la non-régression (tous les tests existants passent)
-- [ ] /tm-dev met à jour : story (post-implémentation, si mode story), component-registry, sprint status
-- [ ] /tm-dev inclut les best practices : DRY (check registry), Server Components par défaut, Zod partagé, RLS, 3 états UI
-- [ ] /tm-review accepte un identifiant, "last", ou rien (review les derniers changements)
-- [ ] /tm-review passe chaque point de code-review.md avec verdict ✅/❌
-- [ ] /tm-review fait une review adversariale (edge cases, sécu OWASP, DRY, perf N+1, accessibilité, archi)
-- [ ] /tm-review corrige les problèmes trouvés (pas juste les lister)
+- [ ] /dev implémente dans l'ordre : migration → schemas Zod → Server Actions + tests → UI + tests → page + tests integ → e2e
+- [ ] /dev ajoute une entrée dans docs/changelog.md À CHAQUE COMMIT (pas à la fin)
+- [ ] /dev vérifie la non-régression (tous les tests existants passent)
+- [ ] /dev met à jour : story (post-implémentation, si mode story), component-registry, sprint status
+- [ ] /dev inclut les best practices : DRY (check registry), Server Components par défaut, Zod partagé, RLS, 3 états UI
+- [ ] /revue accepte un identifiant, "last", ou rien (review les derniers changements)
+- [ ] /revue passe chaque point de code-review.md avec verdict ✅/❌
+- [ ] /revue fait une review adversariale (edge cases, sécu OWASP, DRY, perf N+1, accessibilité, archi)
+- [ ] /revue corrige les problèmes trouvés (pas juste les lister)
 
 ---
 
-### E06-S03 — Commandes transversales (/tm-evolve, /tm-status, /tm-sprint)
+### E06-S03 — Commandes transversales (/plan, tm-status, tm-sprint)
 
 **Status :** 🟢 Ready
 **Estimation :** S
 
 **Fichiers à créer :**
-- `.claude/commands/tm-evolve.md` — Évolution PRD avec analyse d'impact cascade + création nouvelles stories
-- `.claude/commands/tm-status.md` — Affiche .claude/sprint/status.md, propose les prochaines actions
-- `.claude/commands/tm-sprint.md` — Initialise un nouveau sprint dans status.md
+- `.claude/skills/plan.md` — Évolution PRD avec analyse d'impact cascade + création nouvelles stories
+- `.claude/skills/tm-status.md` — Affiche .method/sprint/status.md, propose les prochaines actions
+- `.claude/skills/tm-sprint.md` — Initialise un nouveau sprint dans status.md
 
 **Acceptance Criteria :**
-- [ ] /tm-evolve suit le process du PRD : modifier PRD → checklist prd-evolution → cascader impacts (archi, design system, epics, stories, DB) → créer nouvelles stories → MAJ changelog
-- [ ] /tm-evolve vérifie les impacts sur : architecture, design system, epics, stories, DB (migrations)
-- [ ] /tm-evolve crée un ADR si un invariant d'architecture est touché
-- [ ] /tm-status affiche le sprint actuel avec les statuts de chaque story
-- [ ] /tm-status propose la prochaine action (quelle story lancer, ou si review nécessaire)
-- [ ] /tm-sprint crée une nouvelle section dans status.md avec dates, epic focus, tableau stories vide
+- [ ] /plan suit le process du PRD : modifier PRD → checklist prd-evolution → cascader impacts (archi, design system, epics, stories, DB) → créer nouvelles stories → MAJ changelog
+- [ ] /plan vérifie les impacts sur : architecture, design system, epics, stories, DB (migrations)
+- [ ] /plan crée un ADR si un invariant d'architecture est touché
+- [ ] tm-status affiche le sprint actuel avec les statuts de chaque story
+- [ ] tm-status propose la prochaine action (quelle story lancer, ou si review nécessaire)
+- [ ] tm-sprint crée une nouvelle section dans status.md avec dates, epic focus, tableau stories vide
 
 ---
 

@@ -18,7 +18,7 @@ Le banc n'a de valeur que si ses mesures remplacent les affirmations des convent
 
 **Refs :**
 - PRD : FR-REST-03, NFR-REST-01
-- Conventions visées : `.claude/conventions/mcp-patterns.md` §2.1, §3, §7, §8, §10 ; `CLAUDE.md` règle MCP 6 ; `.claude/templates/mcp-golden-queries.tmpl.md` (note « les hosts cachent »)
+- Conventions visées : `.method/conventions/mcp-patterns.md` §2.1, §3, §7, §8, §10 ; `CLAUDE.md` règle MCP 6 ; `.method/templates/mcp-golden-queries.tmpl.md` (note « les hosts cachent »)
 
 ## Critères d'acceptation
 
@@ -31,9 +31,9 @@ Le banc n'a de valeur que si ses mesures remplacent les affirmations des convent
 ## Implémentation
 
 ### Fichiers à modifier
-- `.claude/conventions/mcp-patterns.md`
+- `.method/conventions/mcp-patterns.md`
 - `CLAUDE.md`
-- `.claude/templates/mcp-golden-queries.tmpl.md`
+- `.method/templates/mcp-golden-queries.tmpl.md`
 - `docs/changelog.md`
 
 ## Tests attendus

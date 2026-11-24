@@ -56,8 +56,8 @@ S02 sert des tools echo depuis la base. Cette story ajoute les trois sondes qui 
 - `scripts/smoke-mcp.mjs` : appelle `bench_whoami` après `tools/list`
 
 ### Patterns à suivre
-- `.claude/conventions/mcp-patterns.md` §3 (descriptions, annotations, `.describe()`), §4 (deux formes, erreurs actionnables, `next_actions`), §6 bis (secrets : échouer bruyamment en prod)
-- `.claude/conventions/security-patterns.md`
+- `.method/conventions/mcp-patterns.md` §3 (descriptions, annotations, `.describe()`), §4 (deux formes, erreurs actionnables, `next_actions`), §6 bis (secrets : échouer bruyamment en prod)
+- `.method/conventions/security-patterns.md`
 
 ## Tests attendus
 

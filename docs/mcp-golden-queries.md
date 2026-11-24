@@ -1,6 +1,6 @@
 # Golden Queries — éval AX du canal MCP
 
-> Jeu de prompts anti-régression du routage des tools. Règles d'usage : `.claude/conventions/mcp-patterns.md` §8.
+> Jeu de prompts anti-régression du routage des tools. Règles d'usage : `.method/conventions/mcp-patterns.md` §8.
 > À rejouer sur les quatre hosts (Claude Code, Claude Desktop, claude.ai, ChatGPT developer mode) à chaque évolution des sondes ou de leurs descriptions. Un champ de métadonnée corrigé à la fois ; noter chaque révision dans le journal en bas.
 > Scénario actif pendant l'éval : `baseline`.
 

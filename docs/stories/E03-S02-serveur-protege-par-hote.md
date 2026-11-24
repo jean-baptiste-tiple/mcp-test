@@ -22,7 +22,7 @@ Dépendance installée par le pilote avant le lancement : `jose` (JWKS distante,
 - PRD : FR-AUTH-01 à FR-AUTH-07, critères « preuves sans host », NFR-AUTH-01, NFR-AUTH-02
 - Architecture : §10.2, §10.4, §10.6, §10.7 ; ADR-001 (stateless), ADR-004
 - Conventions : mcp-patterns §2.1, §3, §4, §6, §6 bis, §10
-- Starter : `.claude/starters/mcp/auth.ts` (verifyToken, requireAuthContext), `oauth-protected-resource-route.ts`, bloc `withMcpAuth` de `mcp-route.ts`. `mcp-handler` 1.1.0 : `withMcpAuth(handler, verifyToken, { required, resourceMetadataPath, resourceUrl })` prend l'origine dans `x-forwarded-host` / `x-forwarded-proto` (Vercel les pose) et construit `resource_metadata = origine + resourceMetadataPath` ; `generateProtectedResourceMetadata`, `metadataCorsOptionsRequestHandler`
+- Starter : `.method/starters/mcp/auth.ts` (verifyToken, requireAuthContext), `oauth-protected-resource-route.ts`, bloc `withMcpAuth` de `mcp-route.ts`. `mcp-handler` 1.1.0 : `withMcpAuth(handler, verifyToken, { required, resourceMetadataPath, resourceUrl })` prend l'origine dans `x-forwarded-host` / `x-forwarded-proto` (Vercel les pose) et construit `resource_metadata = origine + resourceMetadataPath` ; `generateProtectedResourceMetadata`, `metadataCorsOptionsRequestHandler`
 - Modèle : `src/app/api/proto/u/[user]/[transport]/route.ts` (handler par requête, 404 JSON-RPC, `after()`), `src/proto/mcp/server.ts` (handlers bas niveau), `src/mcp/tool-result.ts`
 - Supabase (docs 2026-09-23) : jeton d'accès = JWT Supabase (`sub`, `role`, `aud` `authenticated`, `email`, `client_id`, `session_id`, `amr`, `iss` `https://nwdmkehnxvqyxddgogtu.supabase.co/auth/v1`), JWKS ES256 sur `/auth/v1/.well-known/jwks.json`
 

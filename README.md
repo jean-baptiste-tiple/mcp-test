@@ -2,12 +2,12 @@
 
 Template Git pour bootstrapper un **produit MCP-first** avec la Tiple Method : un SaaS dont le canal principal est un **serveur MCP** consommé depuis Claude et ChatGPT (tools + widgets MCP Apps), avec une app web Next.js en canal secondaire.
 
-C'est le Tiple Method Template de base (structure, templates de docs, checklists, conventions, slash commands Claude Code, design system) **spécialisé MCP** :
+C'est le template de base (structure, templates de docs, checklists, conventions, skills Claude Code, design system) **spécialisé MCP** :
 
-- **Conventions MCP** (`.claude/conventions/mcp-patterns.md`, tag `mcp`) : parité web/MCP par services partagés, AX (découverte par l'agent), design des tools, widgets MCP Apps **dual-host Claude + ChatGPT**, auth OAuth 2.1 via Supabase, serveur stateless, golden queries
-- **Section "Canal MCP"** dans le template d'architecture (`.claude/templates/architecture.tmpl.md`) : tables tools / widgets / auth à remplir au cadrage
-- **Template de golden queries** (`.claude/templates/mcp-golden-queries.tmpl.md`) : l'éval anti-régression du routage des tools, à rejouer sur les deux hosts
-- **Règles MCP dans `CLAUDE.md`** + skill `mcp` auto-déclenché dès qu'on touche `src/mcp/` ou `widgets/`
+- **Conventions MCP** (`.method/conventions/mcp-patterns.md`, tag `mcp`) : parité web/MCP par services partagés, AX (découverte par l'agent), design des tools, widgets MCP Apps **dual-host Claude + ChatGPT**, auth OAuth 2.1 via Supabase, serveur stateless, golden queries
+- **Section "Canal MCP"** dans le template d'architecture (`.method/templates/architecture.tmpl.md`) : tables tools / widgets / auth à remplir au cadrage
+- **Template de golden queries** (`.method/templates/mcp-golden-queries.tmpl.md`) : l'éval anti-régression du routage des tools, à rejouer sur les deux hosts
+- **Règles MCP** dans le tag `mcp`, routé par les globs de `.method/conventions/_index.md` dès qu'on touche `src/mcp/`, `src/proto/` ou `src/auth-test/`
 
 Stack : Next.js 15 (App Router) + TypeScript strict + Tailwind CSS + Shadcn/ui. Backend Supabase via starter (DB + RLS + Auth + Storage — c'est aussi l'authorization server OAuth 2.1 du canal MCP). Canal MCP : `@modelcontextprotocol/sdk` + `mcp-handler` (endpoint `/api/mcp`), widgets buildés par Vite en HTML single-file. IA optionnelle : Claude API (`@anthropic-ai/sdk`).
 
@@ -147,7 +147,7 @@ jetables, sautés sans les clés).
 
 ## Le canal MCP en bref
 
-Les invariants que le template impose (détail dans `.claude/conventions/mcp-patterns.md`) :
+Les invariants que le template impose (détail dans `.method/conventions/mcp-patterns.md`) :
 
 1. **Parité par services partagés** — toute capacité métier = 1 fonction dans `lib/services/` + 2 adaptateurs fins (Server Action web, tool MCP). Jamais de logique métier dans un tool.
 2. **Dual-host day one** — widgets déclarés avec la triple méta (`ui.resourceUri` standard MCP Apps GA + alias plat pré-GA + `openai/outputTemplate` → variante skybridge pour ChatGPT) via un helper unique ; chaque bundle servi en 2 resources (`text/html;profile=mcp-app` + `text/html+skybridge`) ; bridge unique `widgets/shared/bridge.ts` sur le SDK officiel `ext-apps` ; matrice de test des deux hosts avant push.
@@ -170,12 +170,12 @@ Le design system **Tiple (vert mint, éditorial)** complet est inclus, prêt à 
 
 ## Starters
 
-Le template est minimal par défaut. Les starters dans `.claude/starters/` ajoutent des fonctionnalités complètes. Ils sont identifiés par `/tm-plan` (Phase 0) et installés lors de la story de setup.
+Le template est minimal par défaut. Les starters dans `.method/starters/` ajoutent des fonctionnalités complètes. Ils sont identifiés par `/plan` (Phase 0) et installés lors de la story de setup.
 
 | Starter | Dossier | Ce qu'il ajoute |
 |---------|---------|-----------------|
-| **Canal MCP** | `.claude/starters/mcp/` | Endpoint `/api/mcp` (stateless par défaut, stateful prêt), tool démo (`schema Zod → service → tool`), widgets MCP Apps GA (triple méta + skybridge, bundles inlinés), bridge SDK `ext-apps`, auth OAuth 2.1 (RFC 9728), tests `InMemoryTransport` + smoke HTTP |
-| **Supabase + Auth** | `.claude/starters/supabase-auth/` | Base de données, auth (login/signup/reset), middleware, Server Actions, pages auth, CI migrations |
+| **Canal MCP** | `.method/starters/mcp/` | Endpoint `/api/mcp` (stateless par défaut, stateful prêt), tool démo (`schema Zod → service → tool`), widgets MCP Apps GA (triple méta + skybridge, bundles inlinés), bridge SDK `ext-apps`, auth OAuth 2.1 (RFC 9728), tests `InMemoryTransport` + smoke HTTP |
+| **Supabase + Auth** | `.method/starters/supabase-auth/` | Base de données, auth (login/signup/reset), middleware, Server Actions, pages auth, CI migrations |
 
 Pour un produit MCP-first, les deux starters vont ensemble : Supabase + Auth fournit la DB (RLS) et l'authorization server OAuth 2.1 du canal MCP ; le starter Canal MCP fournit le serveur, les widgets et le câblage auth (bloc à décommenter une fois Supabase en place).
 
@@ -193,109 +193,80 @@ pnpm install
 pnpm dev
 
 # 4. Lancer le cadrage dans Claude Code (brief → PRD → archi → epics/stories)
-# /tm-plan
+# /plan
 ```
 
-Le cadrage (`/tm-plan`) remplit la section "Canal MCP" de l'architecture (tools, widgets, auth), fige les décisions structurantes par ADR (authorization server, stateless) et crée `docs/mcp-golden-queries.md` depuis le template.
+Le cadrage (`/plan`) remplit la section "Canal MCP" de l'architecture (tools, widgets, auth), fige les décisions structurantes par ADR (authorization server, stateless) et crée `docs/mcp-golden-queries.md` depuis le template.
 
-## Commandes
+## Méthode
 
-**Deux points d'entrée principaux, 5 modes auto-détectés** :
+La méthode de développement est décrite dans `CLAUDE.md` (échelles, skills, sous-agents, gate de
+commit) ; elle vient du template et se met à jour par `sync-method` (`CLAUDE.md § Mettre à jour
+un projet dérivé`).
 
-| Commande | Usage | Description |
-|----------|-------|-------------|
-| `/tm-plan` | **Toute planification** | Cadrage complet (brief → PRD → archi → design → epics/stories → gate). Détecte auto le mode **initial** (nouveau projet) vs **évolution** (V2, V3, grosse feature). |
-| `/tm-dev` | **Toute action code** | 5 modes auto-détectés depuis l'argument : **story** (`E01-S01`/`next`), **fix** (bug/corrige/cassé), **feature** (ajoute/implémente), **refacto** (nettoie/factorise), **explore** (comprends/analyse, read-only). |
-| `/tm-review` | Code review agent isolé | Agent autonome séparé passe `code-review.md` point par point. Appelé auto par `/tm-dev`. |
-| `/tm-audit` | Revue totale à chaque jalon | 3 passes parallèles par agents isolés : code (checklist+ADRs), UI/UX (captures Playwright + grille notée), AX (simulation de routage des golden queries) → arbitrage, correction, re-validation. |
-| `/tm-verify` | Vérification triple | `pnpm type-check` + `pnpm lint` + `pnpm test` (debug local). |
-| `/tm-wrap-up` | Après un gros chantier | Capture les apprentissages méta (conventions, ADR, registry). Peut aussi être proposé auto par Claude. |
-| `/commit-push` | Commit & push | Type-check + lint + tests + changelog + commit + push (OBLIGATOIRE pour tout push). |
-
-**Commandes dépréciées** (alias rétro-compatibles, seront supprimés) : ~~`/tm-fix`~~ → `/tm-dev` (mode fix), ~~`/tm-feature`~~ → `/tm-plan` + `/tm-dev`.
-
-### Les 5 modes de `/tm-dev`
-
-| Mode | Déclencheur | Ce que ça fait |
-|---|---|---|
-| **Story** | ID (`E01-S01`) ou `next` | Flow complet piloté par la story : conventions auto-chargées, impl, type-check, review agent, finalisation (changelog, post-impl, registry, sprint status) |
-| **Fix** | mots-clés : `bug`, `corrige`, `cassé`, `erreur`, `crash`, `ne marche pas`, `broken`, `régression` | Reproduire avant corriger, diff minimal, test de non-régression obligatoire |
-| **Feature** | mots-clés : `ajoute`, `implémente`, `nouvelle feature`, `add` | Si non-trivial → propose `/tm-plan` pour cadrer d'abord. Sinon : respect registry/design system/a11y |
-| **Refacto** | mots-clés : `refacto`, `nettoie`, `factorise`, `simplifie`, `DRY` | Pas de changement de comportement, tests identiques avant/après, diff minimal |
-| **Explore** | mots-clés : `comprends`, `explique`, `analyse`, `audit`, `lis` | **Read-only** : aucune écriture. Retour structuré |
-
-### Skills auto-déclenchés
-
-`.claude/skills/` contient 23 skills "shim" (un par tag de `.claude/conventions/_index.md`, dont `mcp`) qui s'auto-activent selon le contexte — même **hors** de `/tm-dev`. Exemple : toucher `src/mcp/` ou `widgets/` déclenche le skill `mcp` qui charge `.claude/conventions/mcp-patterns.md`. Les descriptions sont bilingues FR+EN pour un trigger robuste.
+| Skill | Rôle |
+|-------|------|
+| `/dev` | Toute action code : conventions routées par globs, implémentation, tests, vérification |
+| `/design` | Brief de design avant le code, critique sur captures après |
+| `/plan` | Cadrage (explicite uniquement) |
+| `/revue` | Code review adossée aux conventions |
+| `/audit` | Audit de la codebase existante |
+| `/verify` | `pnpm verify` : `check:framework`, type-check, lint, tests, puis reçu |
+| `/wrap-up` | Capture des apprentissages de fin de chantier |
+| `/commit-push` | Seul chemin de commit (le hook bloque `git commit` direct) |
+| `/conventions` | Question sur une règle, sans fichier touché |
 
 ## Structure
 
 ```
-├── CLAUDE.md                    # Instructions Claude Code (Tiple Method + règles MCP)
+├── CLAUDE.md                    # Méthode + règles du projet (banc MCP, Supabase partagé)
 ├── .claude/
-│   ├── commands/                # 8 slash commands (tm-plan, tm-dev, tm-review, tm-verify, tm-wrap-up, commit-push, ...)
-│   ├── skills/                  # 23 skills shim (dont mcp) + tm-wrap-up
-│   └── hooks/                   # enforce-bash-rules.sh
-├── .claude/
+│   ├── skills/                  # 9 skills de la méthode (dev, design, plan, revue, verify, ...)
+│   ├── agents/                  # Sous-agents nommés (implementer, designer, design-critic, reviewer, auditor)
+│   └── hooks/                   # enforce-bash-rules, enforce-git-gate, coordinate-sessions (.mjs)
+├── .method/
 │   ├── templates/               # Templates de documents (dont architecture avec section MCP, golden queries)
-│   ├── checklists/              # 5 checklists quality gates
-│   ├── conventions/             # Conventions par tags (23 fichiers dont mcp-patterns.md + _index.md)
-│   ├── starters/                # Starters optionnels (mcp, supabase-auth)
+│   ├── checklists/              # Quality gates (review, design, story, PRD)
+│   ├── conventions/             # Conventions par tag, routées par les globs de _index.md
+│   ├── starters/                # Starters déjà installés (mcp, supabase-auth), gardés pour référence
 │   └── sprint/status.md         # Sprint tracking
 ├── docs/
-│   ├── brief.md / prd.md / architecture.md   # Générés par /tm-plan
+│   ├── brief.md / prd.md / architecture.md   # Générés par /plan
 │   ├── changelog.md             # Journal des évolutions
 │   ├── design/                  # Design system, maquettes, flows
 │   ├── epics/ + stories/        # Backlog implémentable
-│   └── decisions/               # ADRs (auth MCP, stateless, ... — créés au cadrage)
+│   └── decisions/               # ADRs du projet
 ├── src/
 │   ├── app/
 │   │   ├── (dashboard)/         # Layout principal + page /dashboard placeholder
 │   │   ├── design-system/       # Preview du design system
 │   │   └── api/[transport]/     # Endpoint MCP servi sur /api/mcp — mcp-handler (PAS api/mcp/ : 404 sinon)
 │   ├── mcp/                     # config, assemblage, bench/ (registre, snapshot, journal, handlers)
+│   ├── proto/                   # Serveur proto (E04)
+│   ├── auth-test/               # Serveur auth-test OAuth 2.1 (E03)
 │   ├── components/              # ui/ (34 Shadcn) + composants métier
 │   └── lib/                     # schemas/, supabase/, utils/
 └── tests/                       # Unit, integration, e2e (smoke fournis)
 ```
 
-Pas de dossier `widgets/` : les widgets MCP Apps du starter ne sont pas installés dans ce projet (ADR-002). Le squelette complet reste dans `.claude/starters/mcp/`, guidé par `.claude/conventions/mcp-patterns.md`.
-
-## Personnaliser le template
-
-Après le clone :
-
-1. **`CLAUDE.md`** — Section "Projet" : nom et description
-2. **`docs/design/system.md`** — Ajuster les tokens si besoin (couleurs, radius)
-3. **`.claude/conventions/tech-stack.md`** — Figer les versions MCP et ajouter les libs spécifiques
-4. **`package.json`** — Nom du projet
-
-Puis lancer `/tm-plan` pour le cadrage (qui activera les starters et créera les ADRs nécessaires).
+Pas de dossier `widgets/` : les widgets MCP Apps du starter ne sont pas installés dans ce projet (ADR-002). Le squelette complet reste dans `.method/starters/mcp/`, guidé par `.method/conventions/mcp-patterns.md`.
 
 ## Conventions par tags
 
-Les conventions techniques sont dans `.claude/conventions/` et chargées **automatiquement** selon le contexte :
-
-- **Base (toujours chargées)** : `coding-standards.md`, `component-registry.md`, `tech-stack.md`
-- **Par tags** : chaque story déclare ses tags (ex: `mcp`, `auth`, `database`) → les fichiers correspondants sont chargés
-- **Index** : `.claude/conventions/_index.md`
-
-| Mode | Chargement des conventions |
-|------|----------------------------|
-| `/tm-dev E01-S01` | Tags déclarés dans le champ `Conventions` de la story |
-| `/tm-dev` (libre) | Tags déduits des fichiers touchés (ex: `src/mcp/` → `mcp`, `lib/actions/` → `api`) |
-| **Hors workflow** (édit libre, Q&A) | Skills de `.claude/skills/` auto-déclenchés par mots-clés FR+EN |
+Les conventions techniques sont dans `.method/conventions/`. `coding-standards.md` est toujours
+lue ; les autres sont routées par la colonne **Globs** de `.method/conventions/_index.md` (fichier
+touché → tag → convention), plus les tags déclarés par une story.
 
 ## Qualité & Déploiement
 
 | Check | Où | Quand |
 |---|---|---|
-| `pnpm type-check` + `pnpm lint` + `pnpm test` | **Local** (via `/commit-push`) | Avant chaque push |
+| `pnpm verify` (`check:framework` + `type-check` + `lint` + `test`, puis reçu) | **Local** (`/verify`, réutilisé par `/commit-push`) | Avant chaque commit |
 | `pnpm test:e2e` | **Local** (smoke Playwright fourni : redirect home + design system) | À la demande / avant release |
 | `pnpm build` | **CI GitHub** (`.github/workflows/ci.yml`) | Après chaque push — validation Vercel + catch des erreurs Linux |
 
 Pour les stories taguées `mcp` : en plus des checks ci-dessus, passer la **matrice de test dual-host** (§5.4 de `mcp-patterns.md`) et rejouer les **golden queries** sur Claude et ChatGPT (developer mode) si un tool ou une description a changé.
 
-Un hook Claude Code (`.claude/hooks/enforce-bash-rules.sh`) garantit que les commandes sont exécutées correctement (foreground, sans pipe, sans redirection).
+Les hooks Claude Code (`.claude/hooks/`) bloquent les commandes interdites, tout `git commit` / `git push` sans reçu de `pnpm verify` à jour, et coordonnent les sessions parallèles sur le même checkout.
 
 Le déploiement Vercel est automatique (connecter le repo). La CI migrations Supabase est ajoutée par le starter Supabase + Auth si activé.

@@ -1,6 +1,6 @@
 # Index des Epics
 
-> Généré par `/tm-plan` (phase 5). Vue d'ensemble des epics du projet.
+> Généré par `/plan` (phase 5). Vue d'ensemble des epics du projet.
 
 | ID | Titre | Priorité | Statut | Dépendances |
 |----|-------|----------|--------|-------------|

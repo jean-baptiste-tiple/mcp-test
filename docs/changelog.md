@@ -11,6 +11,12 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-11-24] — Méthode : migration Tiple vers la méthode du template
+**Quoi :** conventions, checklists, templates, starters et sprint déplacés de `.claude/` vers `.method/` (`git mv`) ; commands, skills par tag et hook `.sh` remplacés par les 9 skills, 5 agents et 3 hooks du template ; synchro `sync-method` (`--reviewed`) ; `verify` via `long-run`, gate de commit et hook git.
+**Pourquoi :** le dépôt suivait l'ancienne méthode Tiple, que le template a remplacée.
+**Écarté :** ne copier que `check-framework` et le reçu : laissait les agents nommés et la coordination des sessions, adoptés partout ailleurs.
+**Fichiers :** `.claude/`, `.method/`, `.githooks/`, `scripts/`, `tests/unit/`, `CLAUDE.md`, `README.md`, `package.json`, `docs/`, `files/`.
+
 ## [2026-10-15] — Serveur bench rétabli ; garde du projet Supabase partagé avec oto-pkg
 **Quoi :** tables `public.bench_*` recréées en rejouant `20260922082138_bench.sql` et `20260922092059_probes.sql` (idempotents) dans une transaction, sans toucher à l'historique des migrations, puis `pnpm bench:seed` (27 scénarios, 987 tools), `pnpm mcp:smoke` complet sur la production et un appel réel de `bench_whoami` depuis Claude Code (harnais `bench:cc`). Garde écrite dans `docs/architecture.md` (§ Déploiement) et résumée dans CLAUDE.md : projet partagé avec oto-pkg, propriété des schémas, plus de `db push`, `db reset` ni `migration repair` depuis ce dépôt, migrations en SQL idempotent hors historique.
 **Pourquoi :** le serveur bench répondait en erreur depuis le 26/09 (`public.bench_scenarios` introuvable). Cause établie par `pg_stat_statements` : `DROP TABLE public.bench_tools`, `bench_events`, `bench_scenarios` (`RESTRICT`, dans l'ordre des dépendances) et `DELETE FROM supabase_migrations.schema_migrations WHERE version = ANY($1)` (`migration repair --status reverted`) ; l'historique ne contient plus que les 17 versions d'oto-pkg. Auteur et heure non conservés. JB a choisi de recréer le bench et de garder le partage.

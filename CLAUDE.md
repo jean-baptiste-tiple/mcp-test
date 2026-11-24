@@ -1,185 +1,381 @@
-# CLAUDE.md — Tiple Method
+# CLAUDE.md — Méthode de développement
 
-## Style de réponse (CRITIQUE)
-- **Réponses courtes, droit au but. Le minimum de mots possibles.**
-- Pas de récap qui répète ce que l'user vient de dire. Pas de tableaux décoratifs ni d'emojis sauf si demandé.
-- Pas de "voici ce que j'ai fait", pas de phrases d'intro/transition. État du résultat seulement.
+## Projet
+**MCP Bench** : banc de mesure du comportement des hosts MCP (Claude, ChatGPT, MCP Inspector), pas
+un produit. Trois serveurs : bench (`src/mcp/`, tools en base `bench_*`), proto (`src/proto/`,
+schéma `proto`) et auth-test (`src/auth-test/`, schéma `oauth_test`, OAuth 2.1 Supabase). Leurs
+dérogations volontaires aux règles MCP : `docs/decisions/ADR-002-derogations-banc.md`.
 
-## Avant de coder (CRITIQUE)
-- **Surfacer les hypothèses, pas les masquer.** Si la story/fix est ambigu ou admet plusieurs interprétations : nommer le doute, proposer les options, demander — ne pas trancher en silence.
-- **Edits chirurgicaux.** Chaque ligne changée doit tracer à la demande. Pas de cleanup adjacent, pas de reformatage opportuniste, pas de refacto non demandé. Dead code repéré : le mentionner, pas le supprimer.
-- **Critères de succès vérifiables avant d'implémenter.** Reformuler la tâche en checks concrets (test qui reproduit le bug, assertion qui valide la feature, type-check qui passe). Pas de "make it work" flou.
-- **Ne pas over-engineer — laisser la trace de l'arbitrage.** Toute surface nouvelle (fichier, composant, hook, util, abstraction, prop optionnelle, option de config, table, colonne, flag, dépendance) porte ce qui casse sans elle **aujourd'hui** ; un besoin au futur n'en est pas une → la surface se retire. Au-delà d'un changement trivial, l'entrée changelog nomme l'option d'un cran plus simple écartée et pourquoi (champ `**Écarté :**`). Règle complète : `.claude/conventions/coding-standards.md` §Surfaces nouvelles ; contrôlée par `/tm-review`.
-- **Push back quand justifié.** Si la demande elle-même crée une dette évidente, le dire avant d'exécuter.
+Stack actuelle : Next.js 15 (App Router) · TypeScript strict · Tailwind 4 · Shadcn/ui · zod 3 ·
+`@modelcontextprotocol/sdk` 1.26 + `mcp-handler` 1 (route `src/app/api/[transport]/`), sans widgets.
+La montée vers la stack du template (Next 16, zod 4, SDK MCP 2 : ADR-002 du template) n'est pas
+faite : là où une convention décrit le SDK 2, le code suit encore le SDK 1. Versions exactes : `.method/conventions/tech-stack.md`.
+IA : **zéro IA serveur** — les opérations intelligentes passent par le modèle de l'host
+(`prepare → modèle → save validé`, `mcp-patterns.md` § 4 bis). Un appel LLM serveur se décide par ADR.
+
+**Projet Supabase partagé avec oto-pkg** : jamais `supabase db push`, `pnpm db:push`, `db reset` ni
+`migration repair`, jamais toucher au schéma `platform` ; une migration s'applique en SQL
+idempotent hors historique. Objets de ce dépôt : `public.bench_*`, schémas `proto` et
+`oauth_test`. Règle complète : `docs/architecture.md`, garde du projet partagé.
+
+## Style de réponse
+
+- Réponses courtes, droit au but. Le minimum de mots possible.
+- Pas de récap de ce que l'utilisateur vient de dire. Pas de tableau décoratif ni d'emoji sauf demande.
+- Pas de « voici ce que j'ai fait », pas de phrase d'introduction ni de transition. L'état du résultat, rien d'autre.
+
+## Avant de coder
+
+- **Toute décision qui revient à l'utilisateur passe par `AskUserQuestion`, jamais par une phrase dans un récap.** Demande à plusieurs lectures, arbitrage produit, refacto proposé, option écartée qui coûterait à rattraper : la question porte le contexte nécessaire pour trancher — par option, sa conséquence et son coût — et la recommandation en premier. Le filtre reste « des lectures différentes mènent à un travail matériellement différent » ; le reste se tranche seul et s'écrit dans le récap. Un **sous-agent ne tranche pas** : il s'arrête et remonte l'arbitrage au pilote, qui pose la question ; la consigne se met dans son prompt. Contrôlable sur la trace : un arbitrage rendu en prose (« j'ai choisi X », « à toi de voir ») sans appel à l'outil est une violation. *(Demande JB 2026-08-28.)*
+- **Edits chirurgicaux.** Chaque ligne changée trace à la demande. Pas de cleanup adjacent, pas de reformatage opportuniste, pas de refacto non demandé. Dead code repéré : le mentionner, pas le supprimer. Un refacto **repéré** n'est pas un refacto **fait** : il se nomme dans le rayon d'impact et devient une question (§ ci-dessus), pas un silence.
+- **Rayon d'impact avant d'éditer, dès l'échelle Standard.** Le plus petit changement local, répété N fois sans regarder autour, produit un Frankenstein : doublons, appelants oubliés, effets de bord que personne n'a nommés. Avant la première ligne — dans la story (section « Rayon d'impact ») ou dans le plan proposé en live — quatre items, chacun observable : **(1) Appelants** : pour chaque fonction, table, colonne, composant ou Server Action modifié, les usages trouvés (**commande de recherche citée**, chemin absolu) et ce qui change pour chacun ; « aucun autre appelant » se prouve par la commande, jamais par affirmation. **(2) Doublons** : ce qui fait déjà la même chose (`component-registry.md` + recherche sur le concept), avec le verdict réutiliser / fusionner / laisser et sa raison. **(3) Effet produit** : quel parcours voit une différence hors de l'écran modifié — autre route ou layout partagé, Server Action appelée ailleurs, policy RLS, webhook ou cron, email transactionnel, export / sitemap / SEO ; **un projet dérivé de ce template remplace cette liste par ses propres systèmes** (§ Projet). **(4) Refacto** : proposé ou écarté, écrit ; s'il est proposé, il est posé en question avec son coût et ce qui se passe sans lui. Contrôlable : un plan ou une story Standard+ sans ces quatre items, ou un item (1) sans commande citée, est une violation. Micro en est exempt — sinon plus personne ne le fait. *(Demande JB 2026-08-28.)*
+- **Critères de succès vérifiables d'abord.** Reformuler la tâche en checks concrets : test qui reproduit le bug, assertion qui valide la feature, type-check qui passe. Pas de « make it work » flou.
+- **Push back quand c'est justifié.** Approche plus simple disponible ou dette évidente créée : le dire avant d'exécuter.
+- **Base à jour avant un chantier documentaire.** `git fetch` et écart avec `origin/main` constatés avant d'écrire dans `docs/`, `.method/` ou `CLAUDE.md`. Une règle écrite sur une base périmée cite des chemins morts.
+- **Un texte qui contient des antislashs s'écrit par l'outil Edit ou Write**, ou par un script écrit avec Write puis lancé : jamais par un heredoc ni un `-c` en ligne de commande, qui réinterprètent les échappements (`C:\apps` y devient `C:` + BEL + `pps`, `'\n'` un vrai saut de ligne). Vu deux fois le 2026-11-24 (treso-luciole, `check-framework-invariants.mjs`). Contrôlable : `check:framework` refuse un caractère de contrôle dans `.method/`, `.claude/` et `CLAUDE.md`, `node --check` un script cassé.
+
+## Justifier une surface nouvelle
+
+Est une **surface** tout ce qui devra ensuite être lu, maintenu ou désappris : fichier,
+composant, hook, util, abstraction, prop optionnelle, option de config, table, colonne,
+feature flag, dépendance.
+
+1. **Toute surface nouvelle porte ce qui casse sans elle aujourd'hui.** Une phrase, écrite dans
+   le récap de livraison — dans le rapport de `revue` dès l'échelle Standard : quel comportement
+   demandé n'existe pas si la surface n'existe pas. Un besoin au futur — « on pourrait vouloir »,
+   « pour rester générique », « ce sera utile quand » — n'est pas une justification : **la surface
+   se retire, elle ne se documente pas.**
+2. **Au-delà d'un changement Micro, le récap nomme l'option d'un cran plus simple qui a été
+   écartée, et la raison de l'écarter.** Un cran plus simple = la même livraison avec une surface
+   en moins : valeur en dur au lieu d'une option, composant existant étendu au lieu d'un nouveau,
+   code en ligne au lieu d'une abstraction, aucune dépendance ajoutée. **Une seule solution
+   présentée = aucun arbitrage rendu**, et la review le traite comme tel
+   (`checklists/code-review.md § Arbitrage de complexité`).
+
+Ces deux obligations ne remplacent ni « réutiliser avant de créer »
+(`.method/conventions/component-registry.md`) ni « factoriser à partir de 2 occurrences »
+(`coding-standards.md § DRY`) : elles en sont la **trace**. Sans elles, rien ne permet de dire,
+en relisant un diff, si l'arbitrage a eu lieu ou si personne n'y a pensé.
+
+## Après une erreur
+
+- **Corriger l'instance ne solde pas l'erreur** — qu'elle soit commise par l'agent, repérée dans le code ou signalée par l'utilisateur. Après le fix, s'arrêter avant de reprendre le fil : qu'est-ce qui a rendu l'erreur possible, et qu'est-ce qui l'empêchera de revenir ? Tant que la seconde question n'a pas de réponse **écrite**, la récidive est garantie — sous une autre forme, dans un contexte où personne ne fera le lien.
+- **L'apprentissage s'écrit là où il sera relu au bon moment**, pas là où c'est commode. Une garde posée dans une convention routée ou une checklist devient **citable en review** (`conventions/<fichier>.md § <section>`) — c'est ce qui la fait relire au bon moment.
+
+| Apprentissage | Emplacement |
+|---|---|
+| Invariant d'architecture absent, flou ou violé | ADR dans `docs/decisions/` (`.method/templates/adr.tmpl.md`) + màj `docs/architecture.md` |
+| Règle technique manquante ou fausse | Fichier du tag dans `.method/conventions/` (globs : `_index.md`) |
+| Point de contrôle absent de la review | `.method/checklists/code-review.md` |
+| Story acceptée alors qu'elle était floue | `.method/checklists/story-ready.md` |
+| Composant recréé au lieu de réutilisé | `.method/conventions/component-registry.md` |
+| Règle de travail globale / gotcha projet | `CLAUDE.md` |
+| Contexte de l'erreur sur la story concernée | Section « Post-implémentation », `docs/stories/` |
+
+L'écriture ne se demande pas et ne s'ajourne pas : la garde s'écrit dans la foulée du fix, et le
+récap dit **quel fichier, quelle section, quelle règle en une phrase** (§ Modifications
+documentaires).
+
+- **Une erreur avérée vaut occurrence suffisante.** Le seuil « 2+ occurrences » de `wrap-up` vise les patterns observés, pas les gardes anti-récidive. Le plafond de 400 lignes par fichier de conventions s'applique en revanche à l'identique : si la garde fait déborder, élaguer plutôt qu'empiler. `wrap-up` reste le filet de fin de chantier ; il ne remplace pas cette boucle immédiate.
+- **Trois écueils :**
+  1. **Ne rien écrire parce que « ça ne se reproduira pas ».** La bonne foi n'est pas un mécanisme.
+  2. **Repousser l'écriture à plus tard.** « Je le noterai au wrap-up » laisse la garde à l'état d'intention. Elle s'écrit dans la foulée du fix, et cette écriture est annoncée — c'est l'annonce, pas un accord préalable, qui la rend relisible.
+  3. **Écrire une règle qui décrit l'erreur au lieu de la rendre détectable.** « Faire attention à X » ne vaut rien. Test avant d'écrire : en relisant la règle, peut-on contrôler si elle a été tenue — par une machine (`pnpm verify`) ou par une citation en review ? « Toute affirmation porte sa source ou est marquée hypothèse » se contrôle ; « être rigoureux » non.
+
+## Règles absolues
+
+1. **Conventions chargées + `pnpm type-check` : à toute échelle, sans exception** — y compris pour un changement d'une ligne.
+2. Lire avant de coder : la story si applicable, sa référence UI si elle n'est pas `N/A`, `docs/architecture.md`, et les conventions routées.
+3. Ne jamais créer un composant, hook ou util sans avoir vérifié `.method/conventions/component-registry.md`. S'il existe, le réutiliser.
+4. Ne jamais modifier un invariant d'architecture sans ADR dans `docs/decisions/`.
+5. Les tests s'écrivent AVEC le code : unit, puis intégration, puis e2e si applicable.
+6. **Aucun artefact n'est obligatoire ; son absence est déclarée, pas subie.** Pas de maquette, pas de story, pas de base de données : le travail se fait quand même. Une référence UI à `N/A` n'est jamais un défaut et la review ne la pénalise pas.
+7. **Cadrage = documentation uniquement.** Pendant un `/plan` : aucune dépendance installée, aucun fichier de code créé, aucun build lancé. Seuls `docs/` et `.method/sprint/` sont modifiés.
+
+### Ce qui est appliqué, et ce qui ne l'est pas
+
+Ces règles n'ont pas la même force, et confondre les deux fait croire à des garanties qui
+n'existent pas.
+
+| Garanti par une machine | Tenu par jugement |
+|---|---|
+| `type-check`, `lint`, `test`, `check:framework` (`pnpm verify`) | Conventions réellement **lues** avant d'écrire (règles 1-2) |
+| Le gate de commit : reçu obligatoire, `--no-verify` / `--force` bloqués | Registry consulté avant de créer (règle 3) |
+| Routing, citations, globs morts, RLS, routes dupliquées (`check:framework`) | ADR posé sur un invariant touché (règle 4) |
+| | Échelle du changement correctement estimée |
+
+Rien ne vérifie qu'une convention a été lue — seulement qu'elle a été **annoncée**. L'annonce
+est donc la seule trace : la produire avant d'implémenter, et la produire fausse est un
+mensonge, pas un raccourci. Quand un doute existe sur la colonne de droite, le dire plutôt que
+de laisser supposer que la colonne de gauche le couvre.
+
+## Échelle du changement
+
+L'ampleur du process dépend de **ce que le changement touche**, jamais des mots employés dans la
+demande. En cas de doute entre deux échelles, prendre la plus haute et le dire.
+
+| Échelle | Reconnaissance | Process |
+|---------|----------------|---------|
+| **Micro** | 1-2 fichiers, aucune nouvelle surface | conventions → implémentation → type-check → **review inline** |
+| **Standard** | 3-5 fichiers, ou création d'une fonction / composant / action | + tests → skill `revue` → changelog |
+| **Module** | nouvelle surface (route, table, parcours), changement DB, ou ≥ 6 fichiers | **proposer une story avant de coder** → tout le Standard → registry → ADR si invariant → sprint status |
+
+Micro ne veut pas dire « sans garantie » : ce qui disparaît est le cérémonial (rapport de review,
+entrée de changelog pour un changement invisible), pas la vérification.
+
+À l'échelle Module, la story se **propose**, ne s'impose pas. Sa raison d'être est précise : c'est
+le seul endroit où les AC sont écrits avant le code, donc le seul moyen pour la review de statuer
+« AC non livré » au lieu de donner un avis. Si l'utilisateur refuse, **rester en Module sans
+story** — registry, ADR et changelog restent dus ; seuls post-implémentation et sprint status
+tombent.
+
+### Garde-fous conditionnels
+
+Déclenchés par la **nature réelle** du travail, quel que soit le vocabulaire employé.
+
+- **Correction d'un comportement cassé** → écrire d'abord un test qui reproduit le bug et échoue.
+- **Changement qui ne doit rien modifier au comportement observable** (réorganisation, extraction, renommage) → lire les tests existants avant · tests **identiques** avant/après · si la zone n'est pas testée, écrire les tests avant.
+
+## Conventions routées par globs
+
+Le routing `fichier touché → tag → convention` a **une seule source de vérité** : la colonne
+**Globs** de [`.method/conventions/_index.md`](.method/conventions/_index.md).
+
+- **Base, toujours lue :** `coding-standards.md` — une seule, volontairement courte.
+- **Par globs :** chaque fichier créé ou modifié active des tags ; les fichiers correspondants sont lus **en entier**.
+- **Mode story :** les tags du champ `Conventions` s'ajoutent (union avec les globs). C'est le seul moyen d'activer `datetime`, `i18n` et `flags`, qu'aucun chemin ne révèle.
+- **Annoncer la liste chargée** avant d'implémenter et avant de reviewer.
+
+Registry et stack sont **routés**, pas systématiques : vérifier le registry n'a de sens qu'en
+créant un composant, la stack qu'en touchant aux dépendances.
+
+Ne jamais déduire ce mapping de mémoire ni le recopier ailleurs. Il n'existe **pas** de skill par
+tag : `dev` et `revue` matchent les globs eux-mêmes.
+
+**Ce qu'ESLint ou TypeScript applique n'est jamais répété en prose.** Une règle mécanisée est
+vérifiée à chaque `pnpm lint` ; la recopier n'ajoute que du volume à lire.
+
+## Skills
+
+Tout vit dans `.claude/skills/`. Un skill se déclenche **sur l'intention** et reste invocable en
+`/<nom>`.
+
+| Skill | Déclenchement | Rôle |
+|-------|---------------|------|
+| `dev` | auto — modification de `src/`, `tests/`, `supabase/`, config | 2 modes (lecture / écriture) × 3 échelles |
+| `design` | auto — changement visible dès l'échelle Standard | Brief avant code (sous-agent `designer`), critique sur captures après (sous-agent `design-critic`) |
+| `revue` | auto — fin d'implémentation dès l'échelle Standard | Conventions routées, confrontées au diff |
+| `verify` | auto — « vérifie », « ça compile ? », après un fix | `pnpm verify` : 4 checks + reçu |
+| `commit-push` | auto — « commit », « push », « envoie » | Checks (sans les rejouer) + changelog + commit + push |
+| `wrap-up` | auto — « on a fini », « c'est bouclé » | Capture les apprentissages de fin de chantier : conventions, ADR, registry |
+| `conventions` | auto — question sur une règle, sans fichier touché | Répond depuis `.method/conventions/` en citant la source |
+| `audit` | demande explicite d'audit large | Confronte la **codebase existante** aux conventions, par lots |
+| `plan` | **explicite uniquement** | Cadrage : refus / story seule / évolution / initial |
+
+`revue` audite un **diff**, `audit` audite **l'existant** — du code écrit avant les conventions,
+que personne n'a relu depuis. Mêmes sources citables, même barème de gravité.
+
+`plan` ne s'auto-déclenche jamais (`disable-model-invocation`) : un cadrage réécrit PRD,
+architecture et stories. Face à un besoin produit large, le **proposer** et attendre l'accord.
 
 ## Qui exécute : Fable pilote, Opus écrit
 
 Le **modèle de la session** décide du rôle, pas la taille de la demande.
 
 - **Session Fable** — Fable ne modifie **jamais** `src/` ni `tests/` lui-même. Il découpe le
-  travail en lots indépendants, écrit pour chacun les critères vérifiables, lance des `Agent`
-  avec `model: "opus"` — tous dans le même message quand les lots ne se touchent pas, pour
+  travail en lots indépendants, écrit pour chacun les critères vérifiables, lance un
+  `implementer` par lot — tous dans le même message quand les lots ne se touchent pas, pour
   qu'ils tournent en parallèle — puis relit les diffs, arbitre, et porte la finalisation :
-  review, changelog, registry, `commit-push`. Restent à sa main : `docs/`, `.claude/`, les
+  review, changelog, registry, `commit-push`. Restent à sa main : `docs/`, `.method/`, les
   vérifications, les décisions.
-- **Session Opus** — pas de délégation imposée : Opus écrit lui-même, et délègue quand un lot
-  est réellement parallélisable, pas par principe.
-- **`model: "opus"` s'écrit explicitement** sur chaque `Agent` lancé depuis une session Fable :
-  sans ce champ le sous-agent hérite du modèle du parent, et le pilotage ne sert à rien.
-- **Un sous-agent reçoit la méthode, pas seulement la tâche** : échelle annoncée, conventions
-  routées à charger, critères de succès, interdiction de commiter. Le commit reste au pilote.
+- **Session Opus** — pas de délégation imposée : Opus écrit lui-même, et délègue à un
+  `implementer` quand un lot est réellement parallélisable, pas par principe.
 
-## Projet
-<!-- À REMPLIR : Nom du projet, description en 1 ligne -->
+### Les sous-agents de la méthode
 
-## Stack
-Next.js 15 (App Router) + TypeScript strict + Tailwind CSS + Shadcn/ui
-Backend/DB optionnel : Supabase (à ajouter selon le projet — voir section "Supabase" ci-dessous).
-Canal MCP (si produit MCP-first) : `@modelcontextprotocol/sdk` + `mcp-handler` (endpoint `/api/mcp`), widgets MCP Apps buildés par Vite.
-IA : **par défaut, zéro IA serveur** — les opérations intelligentes sont faites par le modèle de l'host (l'abonnement Claude/ChatGPT de l'utilisateur) via le pattern `prepare → modèle → save validé` (mcp-patterns §4 bis). Un appel LLM côté serveur (`@anthropic-ai/sdk`) = décision explicite par ADR au cadrage.
-Voir `.claude/conventions/tech-stack.md` pour les versions exactes.
+Tout sous-agent est un **agent nommé de `.claude/agents/`** : son fichier fixe le modèle (Opus),
+ses outils et la méthode qu'il applique. Le pilote ne transmet que la tâche ; il ne lance jamais
+un agent générique pour un rôle de cette liste. `check:framework` vérifie que chaque agent cité
+par un skill existe.
 
-## Méthode
-Ce projet suit la Tiple Method. La documentation dans `docs/` est la source de vérité. Lis les fichiers pertinents avant chaque action.
+| Agent | Lancé par | Outils | Rôle |
+|-------|-----------|--------|------|
+| `implementer` | le pilote (session Fable, ou lot parallélisable) | tous | Écrit un lot selon la méthode : conventions, rayon d'impact, tests, `verify`, captures UI |
+| `designer` | skill `design`, avant le code | lecture + captures | Brief de design : existant, zoom arrière, options, spécification |
+| `design-critic` | skill `design`, après le rendu | lecture + captures | Critique à contexte neuf sur captures, `checklists/design-review.md` |
+| `reviewer` | skill `revue`, dès l'échelle Module | lecture + commandes | Relecture de code à contexte neuf, protocole de `revue` |
+| `auditor` | skill `audit`, un lot par agent | lecture + rapport | Audit d'un lot de l'existant |
 
-## Règles absolues
-1. Ne JAMAIS coder sans story en statut 🟢 Ready dans `docs/stories/`
-2. TOUJOURS lire avant de coder : la story, la référence UI de la story (maquette, Figma, description — si applicable), `docs/architecture.md`, et les **conventions par tags** (voir ci-dessous)
-3. Ne JAMAIS créer un composant/hook/util sans vérifier le component-registry d'abord — s'il existe, réutiliser
-4. Ne JAMAIS modifier un invariant d'architecture sans créer un ADR dans `docs/decisions/`
-5. Les tests sont écrits AVEC le code, pas après — unit tests d'abord, puis intégration, puis e2e si applicable
-6. Après implémentation : remplir la section "Post-implémentation" de la story
-7. Après implémentation : passer `.claude/checklists/code-review.md` point par point
-8. **`/tm-plan` = documentation uniquement.** Ne JAMAIS installer de dépendances, créer de fichiers de code ou exécuter de builds pendant un cadrage. Seuls les fichiers dans `docs/` et `.claude/sprint/` sont modifiés.
+- **Le pilote transmet la tâche, pas la méthode** : échelle, critères de succès vérifiables,
+  fichiers en jeu, story et brief s'ils existent. La méthode (conventions routées, rayon
+  d'impact dès Standard, tests, interdiction de commiter, **interdiction de trancher un
+  arbitrage**) est dans le fichier de l'agent : il s'arrête et remonte, le pilote pose la question
+  via `AskUserQuestion` (§ Avant de coder). Le commit reste au pilote.
+- **Penser, coder et juger restent des agents distincts.** Seul l'`implementer` écrit ; les
+  quatre autres n'ont pas les outils pour modifier le code. Un agent qui juge ne reçoit jamais le
+  raisonnement de celui qui a produit : le `design-critic` reçoit le brief, les routes et les
+  captures avant ; le `reviewer` la demande, le périmètre et le récap des surfaces nouvelles.
 
-## Conventions par tags (chargement intelligent)
+## Modifications documentaires
 
-Les conventions techniques sont dans `.claude/conventions/`. Claude les met à jour directement quand un apprentissage le justifie (`/tm-wrap-up`), sans validation préalable. Elles sont chargées **automatiquement** selon le contexte :
+Éditer `docs/`, `.method/` ou `README.md` sans toucher au code ne déclenche **aucun skill** :
+`dev` s'en exclut, `revue` ne review pas de la prose, `conventions` répond mais n'écrit pas.
+C'est volontaire — mais trois règles s'appliquent quand même, et personne d'autre ne les porte :
 
-- **Index :** `.claude/conventions/_index.md` liste tous les tags et les fichiers associés
-- **Base (toujours lues) :** `coding-standards.md`, `component-registry.md`, `tech-stack.md`
-- **Mode story (`/tm-dev E01-S01`) :** le champ `Conventions` de la story déclare les tags → les fichiers correspondants sont chargés
-- **Mode libre (`/tm-dev` sans story) :** les tags sont déduits des fichiers touchés (ex: `lib/actions/` → `api`, `supabase/migrations/` → `database`)
+1. **Écrire dans `.method/`, `docs/` et `CLAUDE.md` ne demande aucun accord préalable** —
+   conventions, checklists et ADR compris. En contrepartie, **aucune écriture n'est silencieuse** :
+   le récap nomme le fichier, la section, et la règle en une phrase. Sans cette annonce, une règle
+   ajoutée sera lue comme vraie par toutes les sessions suivantes sans que personne ne l'ait vue
+   passer. Une règle qui en contredit une existante la **remplace** ; elle ne s'empile pas à côté.
+2. **`pnpm check:framework`** reste dû : le routing, les citations et les références de skills se
+   vérifient sur les documents, pas sur le code. Un glob mort ou un `§` inexistant ne se voit
+   qu'ici.
+3. **Une entrée de changelog** seulement si la modification change ce qu'un lecteur doit faire.
+   Une reformulation n'en mérite pas.
 
-Tags disponibles : `auth`, `mcp`, `database`, `supabase`, `api`, `forms`, `realtime`, `security`, `nextjs`, `typescript`, `state`, `feedback`, `performance`, `tables`, `uploads`, `seo`, `a11y`, `i18n`, `datetime`, `monitoring`, `flags`, `deploy`, `testing`
+`docs/changelog.md`, `.method/sprint/`, `docs/stories/`, `docs/decisions/` et le registry sont
+exclus du reçu de vérification : les éditer n'invalide pas des checks déjà passés.
 
-## Règles avant push
-1. **TOUJOURS utiliser `/commit-push`** pour commit et push. Cette commande exécute `pnpm type-check` + `pnpm lint` + `pnpm test` (3 checks locaux), met à jour le changelog, commit et push.
-2. **Type-check + lint + tests = vérifiés EN LOCAL** par `/commit-push` avant push. La CI ne lance plus que `pnpm build` (validation Vercel + catch des erreurs Linux). Pas de duplication.
-3. Ne JAMAIS commit/push en dehors de `/commit-push` sauf demande explicite de l'utilisateur
+## Vérifier, commiter, pousser
 
-## Règles Next.js
-1. **Server Components par défaut.** Pas de `"use client"` sauf si nécessaire (state, effects, event handlers). Pousser le `"use client"` le plus bas possible dans l'arbre.
-2. **Server Actions pour les mutations.** Pas d'API routes sauf webhooks/cron. Chaque action : vérifier auth → valider Zod → exécuter → `revalidatePath` → retourner `{data}` ou `{error}`.
-3. **Schemas Zod partagés.** Un schema dans `lib/schemas/` = validé côté form + côté action. Pas de double validation manuelle.
-4. **Route groups : toujours un `page.tsx`.**  Un route group (ex: `(dashboard)`) avec un `layout.tsx` DOIT avoir au moins un `page.tsx`, sinon le build Next.js échoue (`ENOENT: client-reference-manifest.js`). Si le route group n'est pas utilisé, supprimer le dossier entier.
+- **Pendant l'implémentation :** `pnpm type-check` seul, à chaque itération.
+- **Une fois terminé :** `pnpm verify` — les 4 checks (`check:framework`, `type-check`, `lint`, `test`) **et** l'écriture du reçu. Ne jamais lancer les 4 commandes séparément.
+- **Diff UI :** `pnpm ui:shots <routes touchées>` avant la review, hors reçu (il démarre un serveur). Les captures sont lues et citées par `revue`, elles ne sont pas versionnées.
+- **Pour commiter :** skill `commit-push`. Il lance `pnpm verify:cached`, qui ne rejoue les checks que si le code a bougé depuis le dernier passage.
+- **C'est un gate appliqué, pas une convention.** `.claude/hooks/enforce-git-gate.mjs` bloque tout `git commit` / `git push` direct, et refuse un commit dont le reçu ne couvre pas l'état exact du code. `--no-verify` et `--force` sont bloqués sans échappement possible.
+- **Autre dépôt.** Le gate ne s'applique qu'aux dépôts de cette méthode (`scripts/verify-receipt.mjs` ou reçu présent) : un commit visé par `cd <dir> &&` ou `git -C <dir>` dans un autre dépôt suit le gate de ce dépôt-là (sa propre commande de commit), seuls `--no-verify` et `--force` restent interdits partout. Un projet dérivé qui a son `scripts/verify-receipt.mjs` est jugé par ce script (`node scripts/verify-receipt.mjs check` dans le dérivé), le marqueur restant exigé. Une commande dont les `git` ne visent pas tous le même dépôt (un `-C` et un autre `git`, ou un second `cd`) est jugée comme un commit de ce dépôt-ci : une commande par dépôt. Ne jamais contourner le gate par un autre outil (PowerShell, sous-shell) : si un commit légitime est bloqué, c'est un défaut du hook, à corriger avec son test.
+- **Worktree.** Le gate juge un commit sur le reçu du dépôt que la commande vise (`cd <dir> &&` en tête, ou `git -C <dir>`) : lancer `pnpm verify` puis `git commit` DANS le worktree. Le hook qui s'exécute est celui du checkout de la session : si sa copie est antérieure à ce correctif, ouvrir la session dans le worktree. Pour une branche sans commit, avancer par `git stash -u` → `git reset --hard main` → `git stash pop`. Un worktree fait son propre `pnpm install` : jamais de `node_modules` relié (jonction, lien symbolique) à celui d'un autre checkout, car pnpm refait les liens vers le worktree et vide l'original au run suivant, ce qui casse la session qui y travaille (dev-sofrani, 2026-11-24).
+### Plusieurs sessions sur le même checkout
 
-## Starters
+Plusieurs conversations travaillent souvent en même temps dans ce dossier. Les commandes longues
+se **mutualisent** : un seul run, au bon moment, pour tout le monde.
 
-Le template est minimal par défaut. Les starters dans `.claude/starters/` ajoutent des fonctionnalités complètes. Ils sont **identifiés** par `/tm-plan` (Phase 0) et **installés** par `/tm-dev` lors de la story E01-S01 (Setup technique).
+**Ce que l'outillage garantit** (`scripts/long-run.mjs`, hook `.claude/hooks/coordinate-sessions.mjs`, branché comme le gate sur les outils Bash et PowerShell, ce que `check:framework` vérifie) :
+- `verify`, `build`, `test:e2e`, `ui:shots`, `mcp:smoke` tournent **un à la fois** :
+  une commande lancée pendant une autre attend sa fin au lieu de tourner en parallèle.
+- `verify` et `build` **gèlent** le checkout : avant de partir, ils attendent que les autres
+  sessions aient cessé d'écrire depuis 30 s (5 min au plus) ; pendant le run, le hook refuse les
+  `Edit`/`Write` des autres sessions. Une session bloquée attend avec `node scripts/long-run.mjs
+  wait`, puis réessaie ; elle ne contourne pas par Bash.
+- Un `verify` qui a attendu celui d'une autre session **ne rejoue rien** si le reçu couvre déjà
+  l'arbre. `node scripts/long-run.mjs status` montre le run en cours et les sessions actives.
 
-### Supabase + Auth (`.claude/starters/supabase-auth/`)
-Ajoute : base de données, auth (login/signup/reset), middleware, Server Actions, pages auth, CI migrations.
-Activé quand le projet a besoin d'une base de données et/ou d'authentification.
-Voir `.claude/starters/supabase-auth/README.md` pour le détail.
+**Ce que chaque session fait** (convention, par messages entre sessions) :
+1. **Avant un run long** : `ListAgents`, puis `SendMessage` aux sessions qui travaillent dans ce
+   dossier : « je gèle pour `verify` (+ `build`…) dans ~1 min : finissez l'écriture en cours,
+   répondez si vous devez attendre, ou si vous voulez que j'inclue votre travail ». Attendre les
+   réponses ou ~1 min.
+2. **Une session qui a besoin du même run ne relance pas** : elle répond « inclus-moi » et attend
+   le résultat.
+3. **Après le run** : envoyer le résultat aux sessions prévenues : OK avec le reçu écrit (elles
+   passent par `commit-push`, dont `verify:cached` réutilise le reçu), ou KO avec les erreurs
+   attribuées aux fichiers de chacune. Chaque session corrige les siennes ; un seul nouveau run
+   ensuite.
+4. **Commiter** : chacune ses fichiers (`git add` explicite), seulement si ils ne dépendent pas du
+   travail non fini d'une autre session.
 
-### Canal MCP (`.claude/starters/mcp/`)
-Ajoute : endpoint `/api/mcp` (Streamable HTTP stateless), tool démo câblé `schema Zod → service → tool`, helpers dual-meta + résultats, auth OAuth 2.1 (à activer avec supabase-auth), bridge widgets unique, widget exemple buildé par Vite (single-file), test unit `InMemoryTransport`.
-Activé pour tout produit MCP-first. Voir `.claude/starters/mcp/README.md` pour le détail.
+- La CI : `pnpm build` sur `main` (validation Vercel, erreurs spécifiques à Linux), sans duplication avec le local. Sur une pull request, elle ajoute les 4 checks : seul gate des PR Dependabot, qui ne passent jamais par `pnpm verify` (`deployment-patterns.md § Dependabot`).
 
-### Règles Supabase (quand activé)
-- **Supabase côté serveur uniquement pour les mutations.** Le browser client est réservé au realtime et à l'auth listener. Jamais de `.insert()/.update()/.delete()` depuis un Client Component.
-- **RLS activé sur toute table.** Pas d'exception sans ADR documenté. Le `service_role` client est interdit sauf cas explicitement documenté.
-- **Migrations versionnées.** Chaque changement DB = `pnpm db:migrate [nom]` → fichier SQL dans `supabase/migrations/`. Jamais de modification en direct. CI auto-deploy via `.github/workflows/supabase-migrations.yml`.
-- **Auth vérifiée dans chaque Server Action** (pas seulement le middleware).
-- **Projet Supabase partagé avec oto-pkg** (ce dépôt) : jamais `supabase db push`, `db reset` ni `migration repair`, jamais toucher au schéma `platform` ; une migration s'applique en SQL idempotent hors historique. Règle complète : `docs/architecture.md`, garde du projet partagé.
+## Mettre à jour un projet dérivé
 
-## Règles MCP (si le produit expose un serveur MCP)
+Les projets dérivés n'ont pas l'historique du template : la méthode les atteint par
+`scripts/sync-method.mjs`, depuis le template, selon le manifeste `sync-manifest.json` du
+template (`owned` : le template fait foi ; `merge` : contenu mixte, jamais écrit sans `--take` ;
+le reste appartient au projet).
 
-1. **Parité par services partagés.** Toute capacité métier = 1 fonction dans `lib/services/` + 2 adaptateurs fins (Server Action web, tool MCP). Jamais de logique métier dans un tool.
-2. **Schemas Zod partagés = source de vérité** des entités échangées par les tools (`lib/schemas/`). Mêmes schemas côté form web et côté tool. Inputs de tools = non fiables → Zod partout.
-3. **Un rendu = un composant React unique.** Si une entité est affichée sur plusieurs surfaces (éditeur web, page publique, widget MCP, PDF), c'est le MÊME composant. Ne jamais dupliquer le rendu.
-4. **Tools authentifiés OAuth 2.1 via Supabase** (RFC 9728 + 401 `WWW-Authenticate` + `securitySchemes` par tool), client Supabase au nom de l'utilisateur (RLS active). `service_role` interdit dans les tools. Transport **stateless par défaut, stateful (Redis/SSE) si le produit l'exige — choix figé par ADR** ; jamais de sessions/push hors ADR.
-5. **Dual-host day one (Claude + ChatGPT)** : widgets déclarés avec la TRIPLE méta (`ui.resourceUri` GA + alias plat pré-GA + `openai/outputTemplate` → variante skybridge) via un helper unique ; 2 resources par bundle (`text/html;profile=mcp-app` + `text/html+skybridge`) ; bridge unique (`widgets/shared/bridge.ts`) sur le SDK officiel `ext-apps` ; matrice de test des deux hosts avant push. Tout tool fonctionne sans widget (texte suffisant). Bundles Vite single-file inlinés dans `generated.ts` (CSP hosts : zéro requête externe).
-6. **AX** : `instructions` serveur maintenu, descriptions "Use this when… / Do not use for…" avec `.describe()` sur CHAQUE champ, `next_actions` dans chaque résultat (graphe fermé, jamais de tool destructif proposé) ; toute évolution de tool/description rejoue les golden queries (`docs/mcp-golden-queries.md`, créé depuis `.claude/templates/mcp-golden-queries.tmpl.md`) sur les deux hosts + **rapport de frictions demandé à l'agent hôte**, recoupé avec le journal serveur. Avant de tester, le geste de rafraîchissement propre à chaque host (mcp-patterns §8) : Claude Code = nouvelle session ; claude.ai = « Actualiser la liste d'outils » puis nouvelle conversation, premier message quelques secondes après l'ouverture ; ChatGPT = bouton « Actualiser » de la fiche du connecteur puis nouvelle conversation avec `@connecteur`. Ne jamais déconnecter/reconnecter. ⚠️ Ce que le modèle doit lire va dans le `content` texte ET dans `structuredContent` : Claude Code ne montre que `structuredContent` quand il existe, claude.ai et ChatGPT montrent le texte (mcp-patterns §4). Les `instructions` ne sont jamais montrées sur claude.ai : toute règle vitale est aussi dans la description du tool (§2.1).
-7. **Zéro IA serveur par défaut (ADR au cadrage)** : opérations intelligentes = pattern `prepare (tool) → modèle de l'host → save (tool validé)`. Consignes + données du prepare dans le `content` texte et dans `structuredContent` (règle 6), enchaînement prepare→save **dans le même tour** (consigne explicite, sinon l'agent s'arrête avant le save). Le save ne fait JAMAIS confiance au modèle : Zod + audits déterministes dont les paramètres sont **re-dérivés côté serveur** (jamais pris du modèle) et dont les invariants **s'adaptent à l'intention** (`kind` — une traduction ne s'audite pas comme une adaptation), sur TOUTE la surface de l'entité, à frontières de mots Unicode/accents. Mêmes fonctions d'audit sur le canal web (parité des garde-fous). Détail : mcp-patterns §4 bis.
-8. **Économie de tokens** : les éditions sont des **deltas** (`ops` par section adressées par nom + `patch` deep-partial avec `null` = suppression), lecture partielle (`sections`), `structuredContent` compact, instructions/descriptions statiques (prompt caching). Le modèle ne relit ni ne réécrit jamais l'entité complète pour une mise à jour. Détail : mcp-patterns §4 ter.
-9. Détail des patterns : `.claude/conventions/mcp-patterns.md` (tag `mcp`). Squelette prêt à installer : `.claude/starters/mcp/` (story S01). Les choix d'auth et de transport sont figés par ADR lors du cadrage (`/tm-plan`).
+1. **Rapport** : `node scripts/sync-method.mjs <dépôt-dérivé>`, rien n'est écrit. Statuts des
+   fichiers `owned` : `nouveau`, `à jour sûr` (inchangé depuis la dernière synchro, empreinte du
+   tampon `sync-state.json` écrit dans le `.method/` du dérivé), `modifié par le projet`,
+   `modifié par le projet, template inchangé` (part projet gardée à une synchro précédente,
+   template identique depuis : compté, pas listé), `exclu par le projet`, `retiré du template` (noté par la synchro précédente, jamais supprimé :
+   à retirer à la main), `propre au projet` (ajouté par le dérivé sous un dossier owned, jamais
+   touché), `doublon à supprimer à la main` (copie d'origine, même contenu, d'un fichier que le
+   template écrit ailleurs : ADR directement sous `docs/decisions/`) ; pour les fichiers `merge`,
+   sections, lignes de tableau, scripts, hooks et lignes `.gitignore` / `.gitattributes` que le template a et pas
+   le dérivé, et le statut `merge sans part projet` (toutes les lignes non vides du dérivé
+   existent dans le template : version antérieure ou égale, rien de propre). `--diff <chemin>`
+   (répétable) affiche le diff unifié template → dérivé d'un fichier owned ou merge, CRLF
+   normalisé, sans rien écrire. Le rapport finit par le rappel `pnpm exec playwright install
+   chromium` quand `@playwright/test` diffère entre template et dérivé.
+2. **Écriture** : `--apply` écrit `nouveau` et `à jour sûr`, et le tampon. **`--reviewed`**, en
+   dernier, quand fusions et arbitrages sont finis : il fait l'`--apply` et note en plus la version
+   du template confrontée à chaque fichier modifié laissé en place, qui passe en `template
+   inchangé` aux synchros suivantes. Un fichier encore en attente d'arbitrage interdit `--reviewed`,
+   sinon il disparaît des rapports. `--take <chemin>`
+   (répétable) écrase un fichier `modifié par le projet` ou `merge sans part projet` : **seulement
+   après avoir lu son diff** (`--diff`), sinon la part du projet est perdue ; sur tout autre
+   fichier `merge`, il est refusé. `--exclude <chemin>` (répétable) refuse durablement un fichier
+   du template (convention retirée volontairement par le dérivé) : noté dans le tampon, il n'est
+   plus jamais écrit, aux synchros suivantes aussi. `--take`, `--exclude` et `--reviewed` impliquent
+   `--apply` ; `--diff` ne se combine avec aucune option d'écriture.
+3. **ADR du template** : ils arrivent dans le sous-dossier `socle/` des `docs/decisions/` du
+   dérivé, qui fait foi. Les copies d'origine signalées `doublon à supprimer à la main` se
+   suppriment à la main. Un document qui voyage cite un ADR du template par son numéro seul
+   (« ADR-001 »), jamais par son chemin.
+4. **Fusion manuelle** des fichiers `merge` listés, dans le dérivé.
+5. **`pnpm verify` dans le dérivé**, puis son propre `commit-push`.
 
-## Workflow quotidien
-1. Lire `.claude/sprint/status.md` → identifier la prochaine story 🟢 Ready
-2. Lire la story complète + ses refs (parcours PRD, référence UI, archi, conventions)
-3. Vérifier `.claude/checklists/story-ready.md`
-4. Implémenter : schemas Zod → backend → tests unit → UI → tests unit UI → page → tests integ
-5. Écrire les tests (unit + integ) au fur et à mesure
-6. Vérifier que les tests de la story passent
-7. **Type-check** (OBLIGATOIRE) : `pnpm type-check` → doit passer sans erreur
-8. **Code Review en agent isolé** (OBLIGATOIRE — `/tm-review`) :
-   - Lancer un agent autonome séparé (regard neuf, sans biais d'implémentation)
-   - L'agent passe `.claude/checklists/code-review.md` point par point
-   - Couvrir : sécurité, qualité, DRY, tests, conventions, architecture, documentation
-   - Si problèmes HAUTE/MOYENNE → corriger puis relancer l'étape 7, puis nouveau review agent
-9. Mettre à jour la story (post-implémentation)
-10. Mettre à jour `.claude/conventions/component-registry.md` si nouveaux composants
-11. Mettre à jour `.claude/sprint/status.md` → story ✅ Done
-12. Ajouter une entrée dans `docs/changelog.md` si changement significatif
-13. Résumer ce qui a été fait — avec l'option plus simple écartée (voir « Avant de coder »)
+Un fichier ajouté au template qui doit voyager s'ajoute au manifeste : `check:framework` refuse
+un glob `owned` qui ne matche rien, une convention ni `owned` ni `merge`, et un document `owned`
+ou `merge` qui cite le chemin du manifeste ou d'un ADR du template (chemins absents d'un dérivé).
+
+## Invariants techniques
+
+Le détail vit dans les conventions routées ; ces cinq points s'appliquent partout et ne se
+déduisent d'aucun chemin de fichier.
+
+1. **Server Components par défaut.** `"use client"` seulement pour state, effets ou event handlers, et poussé le plus bas possible dans l'arbre.
+2. **Server Actions pour les mutations.** Pas de Route Handler sauf webhook ou cron. Chaque action : auth → Zod → exécution → revalidation → `{data}` ou `{error}`.
+3. **Un schema Zod = une source de vérité**, partagé entre le formulaire et l'action.
+4. **RLS activée sur toute table**, sans exception non documentée par un ADR. Auth revérifiée dans chaque Server Action — le proxy Next (ex-middleware, fourni par le starter `supabase-auth`) ne suffit pas.
+5. **Parité web ↔ MCP par services partagés.** Toute capacité métier = une fonction de service (ici `src/proto/services/` ; le bench déroge, ADR-002 du projet), appelée par le canal web (Server Action pour une mutation, Server Component pour une lecture) ET par le tool MCP, adaptateurs fins. Jamais de logique métier dans un tool ni dans une action.
+
+Route groups : un groupe (`(dashboard)`) avec un `layout.tsx` doit avoir au moins un `page.tsx`,
+et **deux `page.tsx` ne doivent jamais résoudre le même chemin** une fois les segments `(...)`
+retirés — Next ne le signale pas, il en choisit un en silence.
+
+## Design system
+
+Thème du projet : **vert mint Tiple** (`--primary`, #06f5a2) sur neutres chauds, sidebar sombre dans
+les deux thèmes, Instrument Sans + JetBrains Mono, boutons, badges et inputs en pilule. Le mint
+sert aux fonds et bordures, jamais au texte fin sur fond clair (échoue AA) : texte-accent en
+`text-primary-dark`. Tailwind v4 CSS-first (`src/app/globals.css`, pas de `tailwind.config.ts`),
+dark mode class-based (next-themes), icônes Phosphor. Documentation dans `docs/design/system.md`,
+preview sur la route `/design-system`.
+
+**Écart au template** : le `src/` existant ne tient pas les invariants UI du template (tirets
+cadratins, `*-screen`, `lucide-react`, valeurs arbitraires : 21 occurrences ; 2 couleurs
+numérotées dans `src/components/ui/badge.tsx`). `check:framework` ne les contrôle donc pas dans ce
+dépôt (`invariantsUi` et le contrôle des couleurs numérotées retirés de
+`scripts/check-framework-invariants.mjs`) ; les règles ci-dessous restent dues sur tout code neuf,
+tenues par la review.
+
+- **Réutiliser avant de créer** : `.method/conventions/component-registry.md` puis `src/components/ui/`.
+- **Classes sémantiques uniquement** (`bg-primary`, `text-muted-foreground`, `border-border`). Aucune couleur Tailwind numérotée (`bg-emerald-500`), aucun hex, aucun `dark:` de couleur dans `src/` (`check:framework`).
+- **Penser le produit avant de coder l'écran.** Dès l'échelle Standard, tout changement visible passe par le skill `design` : brief du sous-agent `designer` (existant capturé, zoom arrière « l'écran supporte-t-il encore la fonctionnalité ? », options dont la plus petite, verdict ajouter / réorganiser l'encart / repenser l'écran), puis critique du sous-agent `design-critic` sur captures (`checklists/design-review.md`). Un verdict « repenser l'écran » se pose en question. Règles : `ui-patterns.md § Intégrer une fonctionnalité` et `§ Principes UX`.
+- **Mobile d'abord, trois largeurs, deux thèmes.** Un écran est terminé quand ses captures à 375, 768 et 1280 px, en clair et en sombre (`pnpm ui:shots <route>`), ont été lues et citées en review. Composition, responsive, texte et signatures IA : convention `ui-patterns.md`, tag `ui`, routée sur tout composant et toute page.
+- **Aucun tiret cadratin dans une chaîne visible** (`check:framework`). *(Décision JB 2026-10-09.)*
+
+## Workflow
+
+1. Déterminer l'échelle (Micro / Standard / Module).
+2. Charger les conventions routées par globs, plus les tags de la story si applicable. **Annoncer la liste.**
+3. Story : la lire entièrement, passer `.method/checklists/story-ready.md`, lire la référence UI si ≠ `N/A`. Sinon : reformuler en critères vérifiables et, dès l'échelle Standard, proposer le plan avant d'éditer.
+4. Implémenter : migration DB → schemas Zod → Server Actions + tests → composants + tests → page + tests d'intégration.
+5. Appliquer les garde-fous conditionnels.
+6. `pnpm verify`.
+7. Review — inline en Micro, skill `revue` dès Standard. Tout problème HAUTE ou MOYENNE **cite sa source** (`conventions/<fichier>.md § <section>`, `CLAUDE.md § <section>`, `checklists/code-review.md § <section>`, ou un AC). Sans source : BASSE, non bloquant.
+8. Finaliser selon l'échelle : changelog · registry · post-implémentation · sprint status · ADR.
+9. `commit-push`.
 
 ## Quand le PRD évolue
-1. Modifier `docs/prd.md` — parcours concerné, statut 🔶 Draft
-2. Passer `.claude/checklists/prd-evolution.md` point par point
-3. Identifier les impacts : parcours, maquettes/références UI (si applicable), architecture, epics, stories, DB
-4. Mettre à jour `docs/architecture.md` (+ ADR si invariant touché)
-5. (si maquettes) Mettre à jour les maquettes si nécessaire (`docs/design/screens/`)
-6. Mettre à jour les epics et stories impactées
-7. Ajouter une entrée dans `docs/changelog.md`
-8. Lister les nouvelles stories à créer
 
-## Quand on crée un nouveau composant
-1. Vérifier `.claude/conventions/component-registry.md` — s'il existe déjà, réutiliser
-2. Implémenter en suivant `.claude/conventions/coding-standards.md`
-3. Ajouter au component-registry (nom, path, props, notes)
-4. Respecter `docs/design/system.md` pour les tokens visuels
+1. Modifier `docs/prd.md` — parcours concerné, statut 🔶 Draft.
+2. Passer `.method/checklists/prd-evolution.md`.
+3. Identifier les impacts **réels** : parcours, référence UI, architecture, epics, stories, DB. Ne pas cascader par principe.
+4. Mettre à jour `docs/architecture.md`, plus un ADR si un invariant est touché.
+5. Mettre à jour les epics et stories impactées, créer uniquement les nouvelles.
+6. Ajouter une entrée dans `docs/changelog.md`.
 
-## Commandes disponibles
-
-Slash commands dans `.claude/commands/` :
-
-| Commande | Usage | Description |
-|----------|-------|-------------|
-| `/tm-plan` | Toute planification (initial ou évolution) | Cadrage complet : brief → PRD → archi → design → epics/stories → gate. Détecte auto le mode initial vs évolution (V2+). |
-| `/tm-dev` | Toute action code | Modes **story** (`E01-S01`/`next`), **fix**, **feature**, **refacto**, **explore** (read-only) — détectés auto depuis l'argument. |
-| `/tm-review` | Code review agent isolé | Review autonome passant `code-review.md` point par point. Appelé automatiquement par `/tm-dev`. |
-| `/tm-audit` | Revue totale à chaque jalon | 3 passes parallèles par agents isolés : code (checklist+ADRs), UI/UX (captures Playwright réelles + grille notée), AX (simulation de routage des golden queries sur métadonnées seules) → arbitrage, correction des HIGH/MED/quick wins, re-validation. |
-| `/tm-wrap-up` | Après un gros chantier | Capture les apprentissages méta (conventions, ADR, registry). Peut aussi être proposé auto par Claude. |
-| `/commit-push` | Commit & push | Type-check + lint + changelog + commit + push (OBLIGATOIRE pour tout push) |
-| ~~`/tm-fix`~~ | Déprécié | Alias rétro-compatible de `/tm-dev` en mode fix. Sera supprimé. |
-| ~~`/tm-feature`~~ | Déprécié | Remplacé par `/tm-plan` (cadrage) + `/tm-dev` mode feature (code). Sera supprimé. |
-
-## Design System
-
-Le projet inclut le design system Tiple complet (vert mint, éditorial). Toujours s'y référer avant de créer un composant UI.
-
-- **Tokens & documentation :** `docs/design/system.md` — couleurs, typographie, spacing, radius, shadows
-- **Preview interactive :** route `/design-system` — tous les composants rendus
-- **Composants Shadcn/ui :** `src/components/ui/` — 34 composants installés (style new-york)
-- **Composants métier :** `src/components/` — PageContainer, EmptyState, StatCard, DataTable, ThemeToggle, ThemeProvider, CopyButton, AppLogo
-- **Registry complet :** `.claude/conventions/component-registry.md` — TOUJOURS vérifier avant de créer un composant
-- **Thème :** Vert mint Tiple (#06f5a2) sur neutres chauds, fond de page #FAFAFA (surfaces de contenu opaques `bg-card`), sidebar SOMBRE dans les deux thèmes (item actif pill mint), pattern de page `.page-canvas` (halo mint + croix) + `.noise-overlay`, dark mode class-based (next-themes), Instrument Sans + JetBrains Mono, boutons/badges/inputs en pilule
-- **Icônes :** Phosphor (`@phosphor-icons/react`, `/dist/ssr` en Server Component) pour l'app ; lucide-react réservé aux internes Shadcn
-- **CSS Variables & config :** `src/app/globals.css` — SOURCE UNIQUE (Tailwind v4 CSS-first : tokens, dark variant, plugin animate, keyframes — il n'y a pas de `tailwind.config.ts`)
-
-### Règles UI
-1. **Réutiliser les composants existants** — vérifier le registry et `src/components/ui/` avant de créer
-2. **Respecter les tokens** — utiliser les classes Tailwind sémantiques (`bg-primary`, `text-muted-foreground`, `border-border`)
-3. **Pas de couleurs en dur** — toujours passer par les CSS variables/tokens
-4. **Contraste mint :** le mint (`--primary`) sert aux fills/bordures, JAMAIS au texte fin sur fond clair (échoue AA) → texte-accent = `text-primary-dark`
-5. **Dark mode compatible** — tester les deux thèmes
-
-## Conventions
-- Index des tags : `.claude/conventions/_index.md`
-- Coding standards : `.claude/conventions/coding-standards.md`
-- Stack technique : `.claude/conventions/tech-stack.md`
-- Stratégie de tests : `.claude/conventions/testing-strategy.md`
-- Registry composants : `.claude/conventions/component-registry.md`
-- Patterns API : `.claude/conventions/api-patterns.md`
+Un changement qui ne touche ni parcours ni modèle de données ne relève pas d'une évolution de
+PRD : passer directement en implémentation.

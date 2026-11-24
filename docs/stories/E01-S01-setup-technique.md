@@ -19,7 +19,7 @@ Le dépôt est le template Tiple nu : pas de dépendance MCP ni Supabase, script
 **Refs :**
 - PRD : parcours 4.1, 4.2 (prérequis de FR-PILOT-01, FR-OBS-01)
 - Architecture : sections 2, 3, 8 ; ADR-001, ADR-002
-- Starter : `.claude/starters/mcp/README.md` (sans la partie widgets ni auth), `.claude/starters/supabase-auth/README.md` (uniquement `supabase/config.toml`)
+- Starter : `.method/starters/mcp/README.md` (sans la partie widgets ni auth), `.method/starters/supabase-auth/README.md` (uniquement `supabase/config.toml`)
 
 ## Critères d'acceptation
 
@@ -38,7 +38,7 @@ Le dépôt est le template Tiple nu : pas de dépendance MCP ni Supabase, script
 - Ne PAS installer : jose, @modelcontextprotocol/ext-apps, vite, vite-plugin-singlefile, @supabase/ssr.
 
 ### Fichiers à créer
-- `src/app/api/[transport]/route.ts` ← `.claude/starters/mcp/mcp-route.ts` (stateless, bloc auth laissé commenté)
+- `src/app/api/[transport]/route.ts` ← `.method/starters/mcp/mcp-route.ts` (stateless, bloc auth laissé commenté)
 - `src/mcp/config.ts` ← starter `config.ts` ; `MCP_SERVER_INFO = { name: "mcp-bench", title: "MCP Bench", version: "0.1.0" }` ; retirer `supabaseIssuer` et `MCP_SCOPES_SUPPORTED` (phase 3)
 - `src/mcp/server.ts` ← starter `server.ts` sans `registerWidgets` ni capability `resources` ; instructions provisoires « MCP Bench: test server. Call get_status. »
 - `src/mcp/tool-result.ts` ← starter `tool-result.ts` (retirer les références widget)
@@ -52,12 +52,12 @@ Le dépôt est le template Tiple nu : pas de dépendance MCP ni Supabase, script
 ### Fichiers à modifier
 - `package.json` : scripts `mcp:smoke`, `mcp:inspect`, `db:migrate` (`supabase migration new`), `db:push` (`supabase db push`), `db:types` (`supabase gen types typescript --project-id nwdmkehnxvqyxddgogtu --schema public > src/types/database.ts`), `db:reset` retiré
 - `.env.example` : bloc Supabase décommenté avec les noms réels, `SUPABASE_SECRET_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `BENCH_ACK_SECRET` (S03)
-- `.claude/conventions/tech-stack.md` : versions exactes
+- `.method/conventions/tech-stack.md` : versions exactes
 - `README.md` : section « MCP Bench » (ce que c'est, ADR-002, comment lancer le smoke)
 
 ### Patterns à suivre
-- `.claude/conventions/mcp-patterns.md` §7 (stateless), §10 (tests InMemoryTransport, smoke)
-- `.claude/conventions/database-patterns.md` (migrations)
+- `.method/conventions/mcp-patterns.md` §7 (stateless), §10 (tests InMemoryTransport, smoke)
+- `.method/conventions/database-patterns.md` (migrations)
 - Pièges du starter : route dans `api/[transport]` et PAS `api/mcp/[transport]`
 
 ### Actions JB (hors code)

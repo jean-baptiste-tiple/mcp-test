@@ -1,0 +1,153 @@
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { afterEach, describe, expect, it } from "vitest"
+
+import { verifierInvariants } from "../../scripts/check-framework-invariants.mjs"
+
+const roots: string[] = []
+
+function allErrorsFor(files: Record<string, string>, warnings: string[] = []): string[] {
+  const root = mkdtempSync(join(tmpdir(), "invariants-"))
+  roots.push(root)
+  for (const [f, content] of Object.entries(files)) {
+    mkdirSync(join(root, f, ".."), { recursive: true })
+    writeFileSync(join(root, f), content)
+  }
+  const walk = (dir: string, out: string[] = []): string[] => {
+    for (const e of readdirSync(dir)) {
+      const p = join(dir, e)
+      if (statSync(p).isDirectory()) walk(p, out)
+      else out.push(p)
+    }
+    return out
+  }
+  const errors: string[] = []
+  verifierInvariants({
+    ROOT: root,
+    read: (p: string) => readFileSync(p, "utf8"),
+    walk,
+    err: (m: string) => errors.push(m),
+    warn: (m: string) => warnings.push(m),
+  })
+  return errors
+}
+
+afterEach(() => {
+  for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true })
+})
+
+describe("verifierInvariants — pins et Dependabot", () => {
+  const MAJORS = '      - dependency-name: "*"\n        update-types: ["version-update:semver-major"]'
+
+  function dependabotYml(ignores: string[]): string {
+    return [
+      "version: 2",
+      "updates:",
+      "  - package-ecosystem: npm",
+      "    directory: /",
+      "    groups:",
+      "      mineures-et-patchs:",
+      '        patterns: ["*"]',
+      '        update-types: ["minor", "patch"]',
+      "    ignore:",
+      ...ignores,
+      "",
+    ].join("\n")
+  }
+
+  /** Erreurs Dependabot pour ces dépendances ; `yml` à `null` = pas de .github/dependabot.yml. */
+  function dependabotErrorsFor(
+    dependencies: Record<string, string>,
+    yml: string | null,
+    warnings: string[] = []
+  ): string[] {
+    const files: Record<string, string> = { "package.json": JSON.stringify({ dependencies }) }
+    if (yml !== null) files[".github/dependabot.yml"] = yml
+    return allErrorsFor(files, warnings).filter((m) => m.includes("dependabot.yml"))
+  }
+
+  it("should fail on an exact pin without an ignore entry", () => {
+    const errors = dependabotErrorsFor({ jose: "6.2.12" }, dependabotYml([MAJORS]))
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain("`jose` épinglé en `6.2.12`")
+    expect(errors[0]).toContain("deployment-patterns.md § Dependabot")
+  })
+
+  it("should pass on an exact pin with a minor ignore entry", () => {
+    const yml = dependabotYml([MAJORS, "      - dependency-name: jose", '        update-types: ["version-update:semver-minor"]'])
+    expect(dependabotErrorsFor({ jose: "6.2.12" }, yml)).toHaveLength(0)
+  })
+
+  it("should treat a tilde range as a pin", () => {
+    const errors = dependabotErrorsFor({ typescript: "~5.8.3" }, dependabotYml([MAJORS]))
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain("`typescript` épinglé en `~5.8.3`")
+  })
+
+  it("should ignore a caret range", () => {
+    expect(dependabotErrorsFor({ zod: "^3" }, dependabotYml([MAJORS]))).toHaveLength(0)
+  })
+
+  it("should only warn when dependabot.yml is absent", () => {
+    const warnings: string[] = []
+    expect(dependabotErrorsFor({ jose: "6.2.12" }, null, warnings)).toHaveLength(0)
+    expect(warnings.some((w) => w.includes("Dependabot non configuré"))).toBe(true)
+  })
+
+  it("should fail when majors are not ignored globally", () => {
+    const errors = dependabotErrorsFor({ zod: "^3" }, dependabotYml([]))
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain("les majeures ne sont pas ignorées globalement")
+  })
+
+  it("should read a quoted entry with a trailing comment", () => {
+    const yml = dependabotYml([
+      MAJORS,
+      '      - dependency-name: "@modelcontextprotocol/sdk" # peer EXACT de mcp-handler',
+      '        update-types: ["version-update:semver-minor", "version-update:semver-patch"]',
+    ])
+    expect(dependabotErrorsFor({ "@modelcontextprotocol/sdk": "1.26.0" }, yml)).toHaveLength(0)
+  })
+})
+
+describe("verifierInvariants — hooks branchés sur PowerShell", () => {
+  const settings = (matcher: string) =>
+    JSON.stringify({
+      hooks: {
+        PreToolUse: [
+          { matcher, hooks: [{ type: "command", command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/enforce-git-gate.mjs"' }] },
+        ],
+      },
+    })
+  const erreursSettings = (matcher: string) =>
+    allErrorsFor({ ".claude/settings.json": settings(matcher) }).filter((m) => m.includes("settings.json"))
+
+  it("should fail when the git gate only watches Bash", () => {
+    // Un `git commit` lancé par l'outil PowerShell passait sans gate (app-pmo, 2026-11-24).
+    const errors = erreursSettings("Bash")
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain("PowerShell")
+  })
+
+  it("should accept a gate that watches Bash and PowerShell", () => {
+    expect(erreursSettings("Bash|PowerShell")).toHaveLength(0)
+  })
+})
+
+describe("verifierInvariants — caractères de contrôle dans la méthode", () => {
+  const controles = (files: Record<string, string>) =>
+    allErrorsFor(files).filter((m) => m.includes("caractère de contrôle"))
+
+  it("should fail on a control byte in a convention (a Windows path decoded as an escape)", () => {
+    // `C:\apps\app-pmo` écrit par un outil qui interprète `\a` : deux octets BEL dans
+    // database-patterns.md de treso-luciole, invisibles à la relecture (2026-11-24).
+    const errors = controles({ ".method/conventions/database-patterns.md": "Dossier `C:\u0007pps\u0007pp-pmo`\n" })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain(".method/conventions/database-patterns.md:1")
+  })
+
+  it("should accept tabs and CRLF", () => {
+    expect(controles({ "CLAUDE.md": "a\tb\r\nc\n", ".claude/skills/dev/SKILL.md": "ok\n" })).toHaveLength(0)
+  })
+})

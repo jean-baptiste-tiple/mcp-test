@@ -15,7 +15,7 @@ Ce n'est pas une application — c'est un template Git. Il n'y a pas de backend 
 ```mermaid
 graph TB
     subgraph "Méthode (.claude/)"
-        T[templates/] --> |"nourrit"| CMD[.claude/commands/]
+        T[templates/] --> |"nourrit"| CMD[.claude/skills/]
         CK[checklists/] --> |"vérifié par"| CMD
         CV[conventions/] --> |"lu par"| CMD
     end
@@ -81,7 +81,7 @@ tiple-method-template/
 │
 │── ─── MÉTHODE ──────────────────────
 │
-├── .claude/commands/                  # 6 slash commands tm-*
+├── .claude/skills/                  # 6 slash commands tm-*
 │   ├── tm-plan.md                     # Cadrage complet (brief→PRD→archi→design→stories→gate)
 │   ├── tm-dev.md                      # Implémenter (story ou mode libre : bugfix/amélioration)
 │   ├── tm-review.md                   # Code review + review adversariale
@@ -96,9 +96,9 @@ tiple-method-template/
 │   └── sprint/status.md              # Sprint tracking
 │
 ├── docs/                              # Documentation vivante du projet
-│   ├── brief.md                       # Stub → /tm-plan (phase 1)
-│   ├── prd.md                         # Stub → /tm-plan (phase 2)
-│   ├── architecture.md                # Stub → /tm-plan (phase 3)
+│   ├── brief.md                       # Stub → /plan (phase 1)
+│   ├── prd.md                         # Stub → /plan (phase 2)
+│   ├── architecture.md                # Stub → /plan (phase 3)
 │   ├── changelog.md                   # Journal des évolutions
 │   ├── design/                        # Maquettes, design system, user flows
 │   ├── epics/                         # Epics détaillées
@@ -268,7 +268,7 @@ SUPABASE_PROJECT_ID=your-project-id
 
 ## 5. Slash Commands — Architecture interne
 
-Chaque fichier `.claude/commands/tm-*.md` est un markdown qui contient :
+Chaque fichier `.claude/skills/tm-*.md` est un markdown qui contient :
 1. Un titre (nom de la commande)
 2. Un input attendu (argument ou "next"/"last")
 3. Un process étape par étape (quels fichiers lire, quoi produire, quels fichiers mettre à jour)
@@ -280,7 +280,7 @@ Les commandes ne sont PAS du code exécutable. Ce sont des instructions que Clau
 **Commandes principales (séquentielles) :**
 
 ```
-/tm-plan → conversation fluide qui produit :
+/plan → conversation fluide qui produit :
     ├── docs/brief.md          (phase 1 : comprendre le problème)
     ├── docs/prd.md            (phase 2 : structurer les exigences)
     ├── docs/architecture.md   (phase 3 : concevoir l'architecture)
@@ -289,18 +289,18 @@ Les commandes ne sont PAS du code exécutable. Ce sont des instructions que Clau
     ├── docs/stories/*.md      (phase 5 : découper en stories)
     └── gate check             (phase 6 : vérifier la cohérence)
         ↓
-/tm-dev [story-id | "next" | rien]
+/dev [story-id | "next" | rien]
     ├── Mode story : lit story + contexte → code → test → commit + changelog → MAJ registry + sprint
     └── Mode libre : décrit bug/amélioration → lit contexte → code → test → commit + changelog
         ↓
-/tm-review [story-id | "last" | rien]
+/revue [story-id | "last" | rien]
     └── review checklist + adversariale → corrections → rapport
 ```
 
 **Commandes transversales (à tout moment) :**
-- `/tm-evolve` → modifie docs/prd.md + cascade vers architecture/design system/epics/stories + nouvelles stories
-- `/tm-status` → affiche le sprint en cours, propose la prochaine action
-- `/tm-sprint` → initialise un nouveau sprint dans .claude/sprint/status.md
+- `/plan` → modifie docs/prd.md + cascade vers architecture/design system/epics/stories + nouvelles stories
+- `tm-status` → affiche le sprint en cours, propose la prochaine action
+- `tm-sprint` → initialise un nouveau sprint dans .method/sprint/status.md
 
 ---
 

@@ -47,7 +47,7 @@ Le serveur route les intentions : `context(phrase)` doit servir les étapes comp
 - `scripts/lib/proto-data.mjs` : phrases et vocabulaire ajustés pendant la calibration (jamais les paraphrases de test)
 
 ### Patterns à suivre
-- `.claude/conventions/database-patterns.md` (fonctions SQL), `performance-patterns.md`
+- `.method/conventions/database-patterns.md` (fonctions SQL), `performance-patterns.md`
 - Doc fonctionnel : seuils calibrés pour garder ≥ 95 % de bonnes reconnaissances au-dessus du seuil ; le tri fin revient au modèle
 
 ## Tests attendus

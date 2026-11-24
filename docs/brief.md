@@ -2,7 +2,7 @@
 
 ## Problème
 
-Les conventions MCP de Tiple Method (`.claude/conventions/mcp-patterns.md` §2.1, §3, §7, §8, §10) reposent sur des observations ponctuelles faites sur mcp-cv-editor : « les hosts cachent instructions et descriptions, déconnecter/reconnecter avant de tester », « les modèles tronquent, l'essentiel dans la première phrase », « ≤ 10 tools ». Personne ne sait, host par host :
+Les conventions MCP de Tiple Method (`.method/conventions/mcp-patterns.md` §2.1, §3, §7, §8, §10) reposent sur des observations ponctuelles faites sur mcp-cv-editor : « les hosts cachent instructions et descriptions, déconnecter/reconnecter avant de tester », « les modèles tronquent, l'essentiel dans la première phrase », « ≤ 10 tools ». Personne ne sait, host par host :
 
 - quand les instructions serveur et la liste des tools sont lues (ouverture de session, chaque message, ajout du connecteur) ;
 - quelle action minimale rend visible un tool créé ou modifié (rien, nouvelle conversation, reconnexion, suppression du connecteur) ;

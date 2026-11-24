@@ -21,7 +21,7 @@ Dépendance installée par le pilote avant le lancement : `@supabase/ssr`. `NEXT
 **Refs :**
 - PRD : FR-AUTH-07 (journal `consent`), FR-AUTH-08, NFR-AUTH-01
 - Architecture : §10.2, §10.5, §10.6 ; ADR-004 §7, §8
-- Starter : `.claude/starters/supabase-auth/` (README, `supabase-server.ts`, `supabase-client.ts`, `middleware.ts`, `auth-actions.ts`, `auth-layout.tsx`, `login-page.tsx`) ; `auth-patterns.md` §Login, §Middleware, §Sécurité Auth
+- Starter : `.method/starters/supabase-auth/` (README, `supabase-server.ts`, `supabase-client.ts`, `middleware.ts`, `auth-actions.ts`, `auth-layout.tsx`, `login-page.tsx`) ; `auth-patterns.md` §Login, §Middleware, §Sécurité Auth
 - Supabase (docs OAuth server « getting started », 2026-09-23) : redirection vers `<site URL>/oauth/consent?authorization_id=<id>` ; `supabase.auth.oauth.getAuthorizationDetails(id)` rend soit `{ authorization_id, client {id, name, uri, logo_uri}, redirect_uri, user {id, email}, scope }` (consentement à afficher), soit `{ redirect_url }` (déjà consenti → rediriger) ; `approveAuthorization(id, { skipBrowserRedirect: true })` et `denyAuthorization(id, …)` rendent `{ redirect_url }` ; `listGrants()` rend `[{ client, scopes, granted_at }]`, `revokeGrant(clientId)` ; sans session : rediriger vers la connexion en conservant `authorization_id`
 - Design : `docs/design/system.md`, `src/app/globals.css` (`.page-canvas`, `.noise-overlay`), composants `src/components/ui/` (Card, Button, Input, Label, Badge)
 
@@ -54,10 +54,10 @@ Dépendance installée par le pilote avant le lancement : `@supabase/ssr`. `NEXT
 
 ### Fichiers à modifier
 - `docs/architecture.md` §10.5 si l'implémentation s'en écarte
-- `.claude/conventions/component-registry.md` : Server Actions `login`, `logout`, `approve`, `deny`, `revoke` ; schéma `loginSchema`
+- `.method/conventions/component-registry.md` : Server Actions `login`, `logout`, `approve`, `deny`, `revoke` ; schéma `loginSchema`
 
 ### Patterns à suivre
-- `auth-patterns.md` (login, middleware, sécurité), `nextjs-patterns.md` (Server Components, actions), `security-patterns.md` (redirection ouverte, secrets), CLAUDE.md §Règles Next.js (auth vérifiée dans chaque action, Zod partagé)
+- `auth-patterns.md` (login, middleware, sécurité), `nextjs-patterns.md` (Server Components, actions), `security-patterns.md` (redirection ouverte, secrets), CLAUDE.md § Invariants techniques (auth vérifiée dans chaque action, Zod partagé)
 - `coding-standards.md` §Surfaces nouvelles ; `**Écarté :**` au changelog (lien magique écarté, mot de passe retenu pour le pilotage par navigateur)
 - Interdit : `src/auth-test/mcp/`, `src/auth-test/token.ts`, `src/app/api/`, `src/app/.well-known/` (S02) ; `src/proto/`, `src/mcp/`
 

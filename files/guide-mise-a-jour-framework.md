@@ -12,7 +12,7 @@ Deux categories de problemes :
 **Claude Code (comportement du modele) :**
 1. **Background + polling** : lance des commandes en background, redirige la sortie dans un fichier, puis poll avec `cat`/`tail` en boucle.
 2. **Pipes** : ajoute `| tail -20` ou `2>&1 | head` aux commandes.
-3. **Implémentation pendant `/tm-plan`** : installe des packages pendant le cadrage.
+3. **Implémentation pendant `/plan`** : installe des packages pendant le cadrage.
 
 **Environnement local (cause racine des hangs) :**
 4. **TypeScript 5.9.x** : `tsc --noEmit` entre dans une boucle infinie de resolution de types. Fix : epingler `~5.8.3`.
@@ -23,11 +23,11 @@ Deux categories de problemes :
 
 | Ce qui change | Avant | Apres |
 |---------------|-------|-------|
-| **Pendant le dev** (`/tm-dev`, `/tm-fix`) | type-check + lint + tests (3 commandes) | **type-check uniquement** |
+| **Pendant le dev** (`/dev`, `/dev`) | type-check + lint + tests (3 commandes) | **type-check uniquement** |
 | **Au push** (`/commit-push`) | type-check + lint + tests | **type-check + lint** (pas de tests) |
 | **Apres le push** | Pas de CI | **CI GitHub : lint + tests** |
 | **Vercel** | Auto-deploy sur push | Auto-deploy sur push (inchangé) |
-| **`/tm-plan`** | Installait des deps et copiait du code | **Documentation uniquement** |
+| **`/plan`** | Installait des deps et copiait du code | **Documentation uniquement** |
 
 `pnpm test` ne tourne **plus jamais** sur ta machine. Seule la CI GitHub le fait.
 
@@ -174,7 +174,7 @@ Creer ce NOUVEAU fichier (config projet, PAS le .local) :
 
 ---
 
-### ACTION 3 — Creer `.claude/commands/commit-push.md`
+### ACTION 3 — Creer `.claude/skills/commit-push/SKILL.md`
 
 Creer ce NOUVEAU fichier :
 
@@ -287,13 +287,13 @@ Dans la section "Claude Code", remplacer :
 
     # Claude Code
     .claude/*
-    !.claude/commands/
+    !.claude/skills/
 
 par :
 
     # Claude Code
     .claude/*
-    !.claude/commands/
+    !.claude/skills/
     !.claude/settings.json
     !.claude/hooks/
 
@@ -312,7 +312,7 @@ ATTENTION : si la section "Projet" a deja ete remplie dans ton projet, recopie-l
 ## Stack
 Next.js 15 (App Router) + TypeScript strict + Tailwind CSS + Shadcn/ui
 Backend/DB optionnel : Supabase (a ajouter selon le projet — voir section "Supabase" ci-dessous).
-Voir `.claude/conventions/tech-stack.md` pour les versions exactes.
+Voir `.method/conventions/tech-stack.md` pour les versions exactes.
 
 ## Methode
 Ce projet suit la Tiple Method. La documentation dans `docs/` est la source de verite. Lis les fichiers pertinents avant chaque action.
@@ -324,8 +324,8 @@ Ce projet suit la Tiple Method. La documentation dans `docs/` est la source de v
 4. Ne JAMAIS modifier un invariant d'architecture sans creer un ADR dans `docs/decisions/`
 5. Les tests sont ecrits AVEC le code, pas apres — unit tests d'abord, puis integration, puis e2e si applicable
 6. Apres implementation : remplir la section "Post-implementation" de la story
-7. Apres implementation : passer `.claude/checklists/code-review.md` point par point
-8. **`/tm-plan` = documentation uniquement.** Ne JAMAIS installer de dependances, creer de fichiers de code ou executer de builds pendant un cadrage. Seuls les fichiers dans `docs/` et `.claude/sprint/` sont modifies.
+7. Apres implementation : passer `.method/checklists/code-review.md` point par point
+8. **`/plan` = documentation uniquement.** Ne JAMAIS installer de dependances, creer de fichiers de code ou executer de builds pendant un cadrage. Seuls les fichiers dans `docs/` et `.method/sprint/` sont modifies.
 
 ## Regles d'execution Bash (TOUTES les commandes)
 
@@ -341,12 +341,12 @@ Ce projet suit la Tiple Method. La documentation dans `docs/` est la source de v
 
 ## Conventions par tags (chargement intelligent)
 
-Les conventions techniques sont dans `.claude/conventions/`. Elles sont chargees **automatiquement** selon le contexte :
+Les conventions techniques sont dans `.method/conventions/`. Elles sont chargees **automatiquement** selon le contexte :
 
-- **Index :** `.claude/conventions/_index.md` liste tous les tags et les fichiers associes
+- **Index :** `.method/conventions/_index.md` liste tous les tags et les fichiers associes
 - **Base (toujours lues) :** `coding-standards.md`, `component-registry.md`, `tech-stack.md`
-- **Mode story (`/tm-dev E01-S01`) :** le champ `Conventions` de la story declare les tags → les fichiers correspondants sont charges
-- **Mode libre (`/tm-dev` ou `/tm-fix`) :** les tags sont deduits des fichiers touches (ex: `lib/actions/` → `api`, `supabase/migrations/` → `database`)
+- **Mode story (`/dev E01-S01`) :** le champ `Conventions` de la story declare les tags → les fichiers correspondants sont charges
+- **Mode libre (`/dev` ou `/dev`) :** les tags sont deduits des fichiers touches (ex: `lib/actions/` → `api`, `supabase/migrations/` → `database`)
 
 Tags disponibles : `auth`, `database`, `supabase`, `api`, `forms`, `realtime`, `security`, `nextjs`, `typescript`, `state`, `feedback`, `performance`, `tables`, `uploads`, `seo`, `a11y`, `i18n`, `datetime`, `monitoring`, `flags`, `deploy`, `testing`
 
@@ -364,12 +364,12 @@ Tags disponibles : `auth`, `database`, `supabase`, `api`, `forms`, `realtime`, `
 
 ## Starters
 
-Le template est minimal par defaut. Les starters dans `.claude/starters/` ajoutent des fonctionnalites completes. Ils sont **identifies** par `/tm-plan` (Phase 0) et **installes** par `/tm-dev` lors de la story E01-S01 (Setup technique).
+Le template est minimal par defaut. Les starters dans `.method/starters/` ajoutent des fonctionnalites completes. Ils sont **identifies** par `/plan` (Phase 0) et **installes** par `/dev` lors de la story E01-S01 (Setup technique).
 
-### Supabase + Auth (`.claude/starters/supabase-auth/`)
+### Supabase + Auth (`.method/starters/supabase-auth/`)
 Ajoute : base de donnees, auth (login/signup/reset), middleware, Server Actions, pages auth, CI migrations.
 Active quand le projet a besoin d'une base de donnees et/ou d'authentification.
-Voir `.claude/starters/supabase-auth/README.md` pour le detail.
+Voir `.method/starters/supabase-auth/README.md` pour le detail.
 
 ### Regles Supabase (quand active)
 - **Supabase cote serveur uniquement pour les mutations.** Le browser client est reserve au realtime et a l'auth listener. Jamais de `.insert()/.update()/.delete()` depuis un Client Component.
@@ -378,28 +378,28 @@ Voir `.claude/starters/supabase-auth/README.md` pour le detail.
 - **Auth verifiee dans chaque Server Action** (pas seulement le middleware).
 
 ## Workflow quotidien
-1. Lire `.claude/sprint/status.md` → identifier la prochaine story 🟢 Ready
+1. Lire `.method/sprint/status.md` → identifier la prochaine story 🟢 Ready
 2. Lire la story complete + ses refs (parcours PRD, reference UI, archi, conventions)
-3. Verifier `.claude/checklists/story-ready.md`
+3. Verifier `.method/checklists/story-ready.md`
 4. Implementer : schemas Zod → backend → tests unit → UI → tests unit UI → page → tests integ
 5. Ecrire les tests (unit + integ) au fur et a mesure
 6. Verifier que les tests de la story passent
 7. **Type-check** (OBLIGATOIRE) : `pnpm type-check` → doit passer sans erreur
-8. **Code Review en agent isole** (OBLIGATOIRE — `/tm-review`)
+8. **Code Review en agent isole** (OBLIGATOIRE — `/revue`)
 9. Mettre a jour la story (post-implementation)
-10. Mettre a jour `.claude/conventions/component-registry.md` si nouveaux composants
-11. Mettre a jour `.claude/sprint/status.md` → story ✅ Done
+10. Mettre a jour `.method/conventions/component-registry.md` si nouveaux composants
+11. Mettre a jour `.method/sprint/status.md` → story ✅ Done
 12. `/commit-push` pour envoyer sur le remote
 
 ## Commandes disponibles
 
-Slash commands dans `.claude/commands/` :
+Slash commands dans `.claude/skills/` :
 
 | Commande | Usage | Description |
 |----------|-------|-------------|
-| `/tm-plan` | Nouveau projet / nouvelle feature | Cadrage complet : brief → PRD → archi → design → epics/stories → gate |
-| `/tm-dev` | Implementation | `E01-S01` (story), `next` (prochaine), ou sans arg (mode libre) |
-| `/tm-fix` | Bug fix / petite modif | Correction rapide avec chargement auto des conventions |
+| `/plan` | Nouveau projet / nouvelle feature | Cadrage complet : brief → PRD → archi → design → epics/stories → gate |
+| `/dev` | Implementation | `E01-S01` (story), `next` (prochaine), ou sans arg (mode libre) |
+| `/dev` | Bug fix / petite modif | Correction rapide avec chargement auto des conventions |
 | `/commit-push` | Commit & push | Type-check + lint + changelog + commit + push (OBLIGATOIRE) |
 
 ## Design System
@@ -410,7 +410,7 @@ Le projet inclut le design system Tiple complet (vert mint, editorial). Toujours
 - **Preview interactive :** route `/design-system`
 - **Composants Shadcn/ui :** `src/components/ui/` — 34 composants installes (style new-york)
 - **Composants metier :** `src/components/` — PageContainer, EmptyState, StatCard, DataTable, ThemeToggle, ThemeProvider
-- **Registry complet :** `.claude/conventions/component-registry.md` — TOUJOURS verifier avant de creer un composant
+- **Registry complet :** `.method/conventions/component-registry.md` — TOUJOURS verifier avant de creer un composant
 
 ### Regles UI
 1. **Reutiliser les composants existants**
@@ -419,12 +419,12 @@ Le projet inclut le design system Tiple complet (vert mint, editorial). Toujours
 4. **Dark mode compatible** — tester les deux themes
 
 ## Conventions
-- Index des tags : `.claude/conventions/_index.md`
-- Coding standards : `.claude/conventions/coding-standards.md`
-- Stack technique : `.claude/conventions/tech-stack.md`
-- Strategie de tests : `.claude/conventions/testing-strategy.md`
-- Registry composants : `.claude/conventions/component-registry.md`
-- Patterns API : `.claude/conventions/api-patterns.md`
+- Index des tags : `.method/conventions/_index.md`
+- Coding standards : `.method/conventions/coding-standards.md`
+- Stack technique : `.method/conventions/tech-stack.md`
+- Strategie de tests : `.method/conventions/testing-strategy.md`
+- Registry composants : `.method/conventions/component-registry.md`
+- Patterns API : `.method/conventions/api-patterns.md`
 
 ---
 
@@ -452,17 +452,17 @@ Dans les 3 fichiers, remplacer toute mention de "relancer phase 3" ou "relancer 
 
 Juste apres "Pas un formulaire — un dialogue naturel.", ajouter :
 
-> **🚫 REGLE CRITIQUE — `/tm-plan` = ZERO code, ZERO commande systeme**
+> **🚫 REGLE CRITIQUE — `/plan` = ZERO code, ZERO commande systeme**
 >
-> Cette commande produit UNIQUEMENT des fichiers Markdown dans `docs/` et `.claude/sprint/`.
-> Pendant toute la duree du `/tm-plan`, il est INTERDIT de :
+> Cette commande produit UNIQUEMENT des fichiers Markdown dans `docs/` et `.method/sprint/`.
+> Pendant toute la duree du `/plan`, il est INTERDIT de :
 > - Executer `pnpm add`, `pnpm install`, `npm install`, `npx`, ou toute installation de dependances
 > - Creer ou modifier des fichiers `.ts`, `.tsx`, `.js`, `.css`, `.json` (sauf les Markdown de docs)
 > - Executer `pnpm type-check`, `pnpm lint`, `pnpm test`, `pnpm build` ou tout build/check
 > - Copier des fichiers de code depuis les starters
 > - Creer des dossiers dans `src/`, `supabase/`, `.github/`
 >
-> L'installation technique sera faite par `/tm-dev` lors de la premiere story (E01-S01 Setup).
+> L'installation technique sera faite par `/dev` lors de la premiere story (E01-S01 Setup).
 
 Et remplacer la Phase 0 pour qu'elle ne fasse que DOCUMENTER les starters (pas les installer).
 Le plus simple : copier le fichier `tm-plan.md` depuis le template a jour.
@@ -478,7 +478,7 @@ Applique toutes ces modifications maintenant. NE LANCE AUCUNE commande pnpm/npm/
 
 1. `.claude/hooks/enforce-bash-rules.sh` existe et est executable
 2. `.claude/settings.json` existe avec la config hooks
-3. `.claude/commands/commit-push.md` existe
+3. `.claude/skills/commit-push/SKILL.md` existe
 4. `.github/workflows/ci.yml` existe (lint + tests)
 5. `CLAUDE.md` contient "Ne JAMAIS lancer pnpm test localement"
 6. `tm-dev.md` Phase 3 = type-check uniquement (pas de lint/test)
@@ -487,7 +487,7 @@ Applique toutes ces modifications maintenant. NE LANCE AUCUNE commande pnpm/npm/
 
 | Quand | Quoi | Ou |
 |-------|------|----|
-| **Dev** (`/tm-dev`, `/tm-fix`) | `pnpm type-check` | Local |
+| **Dev** (`/dev`, `/dev`) | `pnpm type-check` | Local |
 | **Push** (`/commit-push`) | `pnpm type-check` + `pnpm lint` | Local |
 | **Apres push** | `pnpm lint` + `pnpm test` | CI GitHub |
 | **Apres push** | Deploy | Vercel (auto) |

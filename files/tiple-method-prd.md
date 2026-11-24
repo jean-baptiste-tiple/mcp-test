@@ -31,26 +31,26 @@ Le template est réussi si :
 
 1. **Structure de dossiers** complète (`docs/`, `.claude/`, etc.)
 2. **CLAUDE.md** — Instructions Claude Code pour suivre la méthode
-3. **Templates de documents** (`.claude/templates/`) :
+3. **Templates de documents** (`.method/templates/`) :
    - `brief.tmpl.md` — Product brief
    - `prd.tmpl.md` — PRD avec statuts par section
    - `architecture.tmpl.md` — Architecture avec invariants/flexible
    - `epic.tmpl.md` — Epic détaillée
    - `story.tmpl.md` — Story complète (le plus important)
    - `adr.tmpl.md` — Architecture Decision Record
-4. **Checklists** (`.claude/checklists/`) :
+4. **Checklists** (`.method/checklists/`) :
    - `readiness-gate.md` — Gate avant de coder
    - `story-ready.md` — Definition of Ready
    - `story-done.md` — Definition of Done
    - `code-review.md` — Review post-implémentation
    - `prd-evolution.md` — Check quand les specs changent
-5. **Conventions** (`.claude/conventions/`) :
+5. **Conventions** (`.method/conventions/`) :
    - `coding-standards.md` — Patterns DRY, naming, structure (pré-rempli avec les bonnes pratiques, à personnaliser par projet)
    - `tech-stack.md` — Template à remplir (stack + versions)
    - `testing-strategy.md` — Stratégie unit/integ/e2e (pré-remplie)
    - `component-registry.md` — Registry vide avec structure et instructions
    - `api-patterns.md` — Patterns API standards (pré-rempli)
-6. **Sprint tracking** (`.claude/sprint/`) :
+6. **Sprint tracking** (`.method/sprint/`) :
    - `status.md` — Template de sprint status
 7. **Fichiers docs initiaux** (stubs) :
    - `docs/brief.md` — Placeholder avec instructions
@@ -63,7 +63,7 @@ Le template est réussi si :
    - `docs/epics/_index.md` — Placeholder
    - `docs/stories/.gitkeep`
    - `docs/decisions/.gitkeep`
-8. **Slash commands Claude Code** (`.claude/commands/`) pour déclencher chaque phase
+8. **Slash commands Claude Code** (`.claude/skills/`) pour déclencher chaque phase
 9. **README.md** — Explique la méthode et comment utiliser le template
 10. **`.gitignore`** adapté
 
@@ -95,7 +95,7 @@ Structure du CLAUDE.md :
 
 ## Stack
 Next.js 15 (App Router) + Supabase + TypeScript strict + Tailwind CSS + Shadcn/ui
-Voir .claude/conventions/tech-stack.md pour les versions exactes.
+Voir .method/conventions/tech-stack.md pour les versions exactes.
 
 ## Méthode
 Ce projet suit la Tiple Method. La documentation dans docs/ est la source
@@ -108,42 +108,42 @@ de vérité. Lis les fichiers pertinents avant chaque action.
 [5-6 règles techniques critiques — voir section 3.1.2]
 
 ## Commandes
-/tm-plan — Cadrage complet (brief→PRD→archi→design→stories) — début de projet
-/tm-dev — Implémenter une story ou un bugfix/amélioration en mode libre
-/tm-review — Code review adversariale
-/tm-evolve — Évolution du scope + cascade impacts
-/tm-status — Sprint status
-/tm-sprint — Nouveau sprint
+/plan — Cadrage complet (brief→PRD→archi→design→stories) — début de projet
+/dev — Implémenter une story ou un bugfix/amélioration en mode libre
+/revue — Code review adversariale
+/plan — Évolution du scope + cascade impacts
+tm-status — Sprint status
+tm-sprint — Nouveau sprint
 
 ## Workflow quotidien
-1. /tm-dev [story-id] ou /tm-dev (mode libre pour bugs/améliorations)
+1. /dev [story-id] ou /dev (mode libre pour bugs/améliorations)
 2. Lire le contexte → coder → tester → commit
 3. À chaque commit : entrée dans docs/changelog.md
 4. Non-régression : tous les tests existants passent
 5. MAJ component-registry si nouveau composant/hook/action
 
 ## Quand le scope change
-Lancer /tm-evolve — voir .claude/checklists/prd-evolution.md
+Lancer /plan — voir .method/checklists/prd-evolution.md
 
 ## Quand on crée un nouveau composant
-1. Vérifier .claude/conventions/component-registry.md — réutiliser si existe
+1. Vérifier .method/conventions/component-registry.md — réutiliser si existe
 2. Respecter docs/design/system.md (tokens, patterns)
 3. Implémenter + tests
 4. Ajouter au registry
 
 ## Conventions
-[Pointe vers les fichiers dans .claude/conventions/]
+[Pointe vers les fichiers dans .method/conventions/]
 ```
 
 #### 3.1.1 — Les 8 règles absolues
 
-1. Ne JAMAIS coder une feature sans story en statut 🟢 Ready dans `docs/stories/`. Exception : les bugfixes et petites améliorations peuvent être faits en mode libre via `/tm-dev` sans story formelle.
-2. TOUJOURS lire avant de coder : la story (si applicable), la maquette design référencée, `docs/architecture.md`, `.claude/conventions/component-registry.md`, `.claude/conventions/coding-standards.md`
+1. Ne JAMAIS coder une feature sans story en statut 🟢 Ready dans `docs/stories/`. Exception : les bugfixes et petites améliorations peuvent être faits en mode libre via `/dev` sans story formelle.
+2. TOUJOURS lire avant de coder : la story (si applicable), la maquette design référencée, `docs/architecture.md`, `.method/conventions/component-registry.md`, `.method/conventions/coding-standards.md`
 3. Ne JAMAIS créer un composant/hook/util sans vérifier le component-registry d'abord — s'il existe, réutiliser
 4. Ne JAMAIS modifier un invariant d'architecture sans créer un ADR dans `docs/decisions/`
 5. Les tests sont écrits AVEC le code, pas après — unit tests d'abord, puis intégration, puis e2e si applicable
 6. Après implémentation d'une story : remplir la section "Post-implémentation" de la story
-7. Après implémentation d'une story : passer `.claude/checklists/code-review.md` point par point
+7. Après implémentation d'une story : passer `.method/checklists/code-review.md` point par point
 8. À chaque commit, ajouter une entrée dans `docs/changelog.md` : date, scope, ce qui a été fait, pourquoi, problèmes rencontrés le cas échéant. Le changelog est la mémoire du projet.
 
 #### 3.1.2 — Règles techniques Next.js + Supabase
@@ -157,24 +157,24 @@ Ces règles sont dans le CLAUDE.md car Claude Code doit les avoir en tête en pe
 5. **Schemas Zod partagés.** Un schema dans `lib/schemas/` = validé côté form + côté action. Pas de double validation manuelle.
 6. **Migrations versionnées.** Chaque changement DB = `pnpm db:migrate [nom]` → fichier SQL dans `supabase/migrations/`. Jamais de modification en direct.
 
-### 3.2 — Slash Commands (`.claude/commands/`)
+### 3.2 — Slash Commands (`.claude/skills/`)
 
-Les commandes sont des fichiers markdown dans `.claude/commands/` qui donnent les instructions à Claude Code quand on tape `/nom-commande`. Préfixe `tm-` (Tiple Method) pour éviter les collisions.
+Les commandes sont des fichiers markdown dans `.claude/skills/` qui donnent les instructions à Claude Code quand on tape `/nom-commande`. Préfixe `tm-` (Tiple Method) pour éviter les collisions.
 
 **Principe : 2 commandes au quotidien, 4 commandes occasionnelles.**
 
 | Commande | Fichier | Quand | Ce qu'elle fait |
 |----------|---------|-------|-----------------|
-| `/tm-plan` | `tm-plan.md` | Début de projet | Cadrage complet en une conversation fluide : brief → PRD → architecture → design system → stories. Gate de validation intégrée. |
-| `/tm-dev` | `tm-dev.md` | Quotidien | Implémente une story OU un bugfix/amélioration en mode libre. Lit le contexte, code, teste, met à jour le changelog et le registry. |
-| `/tm-review` | `tm-review.md` | Après dev | Code review avec checklist + review adversariale. Corrige les problèmes trouvés. |
-| `/tm-evolve` | `tm-evolve.md` | Quand le scope change | Évolution du PRD avec analyse d'impact cascade → MAJ architecture, stories, changelog. Crée les nouvelles stories nécessaires. |
-| `/tm-status` | `tm-status.md` | À la demande | Affiche le sprint actuel, les stories terminées/en cours/à venir, propose les prochaines actions. |
-| `/tm-sprint` | `tm-sprint.md` | Début de sprint | Initialise un nouveau sprint dans status.md avec dates, epic focus, stories sélectionnées. |
+| `/plan` | `tm-plan.md` | Début de projet | Cadrage complet en une conversation fluide : brief → PRD → architecture → design system → stories. Gate de validation intégrée. |
+| `/dev` | `tm-dev.md` | Quotidien | Implémente une story OU un bugfix/amélioration en mode libre. Lit le contexte, code, teste, met à jour le changelog et le registry. |
+| `/revue` | `tm-review.md` | Après dev | Code review avec checklist + review adversariale. Corrige les problèmes trouvés. |
+| `/plan` | `tm-evolve.md` | Quand le scope change | Évolution du PRD avec analyse d'impact cascade → MAJ architecture, stories, changelog. Crée les nouvelles stories nécessaires. |
+| `tm-status` | `tm-status.md` | À la demande | Affiche le sprint actuel, les stories terminées/en cours/à venir, propose les prochaines actions. |
+| `tm-sprint` | `tm-sprint.md` | Début de sprint | Initialise un nouveau sprint dans status.md avec dates, epic focus, stories sélectionnées. |
 
 #### Détail des commandes critiques
 
-**`/tm-plan` (cadrage initial) :**
+**`/plan` (cadrage initial) :**
 
 ```markdown
 # Cadrage complet du projet — conversation fluide
@@ -195,7 +195,7 @@ les docs se construisent progressivement.
 - Lister les risques connus
 - Best practices : se concentrer sur les problèmes pas les solutions,
   quantifier la douleur ("perd 2h/semaine" > "c'est lent")
-→ Générer docs/brief.md depuis .claude/templates/brief.tmpl.md
+→ Générer docs/brief.md depuis .method/templates/brief.tmpl.md
 
 ### Phase 2 — Structurer les exigences (→ docs/prd.md)
 - Transformer le brief en exigences fonctionnelles numérotées (FR-DOMAINE-01)
@@ -204,7 +204,7 @@ les docs se construisent progressivement.
 - Découper en Epics avec priorités et dépendances
 - Best practices : chaque FR doit être testable ("l'utilisateur peut X" pas "le système est bon"),
   utiliser MoSCoW avec discipline (max 60% Must), lister explicitement le hors-scope
-→ Générer docs/prd.md depuis .claude/templates/prd.tmpl.md
+→ Générer docs/prd.md depuis .method/templates/prd.tmpl.md
 
 ### Phase 3 — Concevoir l'architecture (→ docs/architecture.md)
 - Modèle de données (tables, relations, diagramme Mermaid ER)
@@ -213,7 +213,7 @@ les docs se construisent progressivement.
 - Points d'attention performance
 - Best practices : commencer simple (pas d'optimisation prématurée),
   RLS dès le jour 1, un schema Zod = une source de vérité
-→ Générer docs/architecture.md depuis .claude/templates/architecture.tmpl.md
+→ Générer docs/architecture.md depuis .method/templates/architecture.tmpl.md
 
 ### Phase 4 — Définir le design system (→ docs/design/system.md)
 - Tokens : couleurs (palette + semantic), spacing, typography, radius, shadows
@@ -234,13 +234,13 @@ les docs se construisent progressivement.
 → Générer docs/epics/*.md et docs/stories/*.md
 
 ### Phase 6 — Gate de validation
-- Passer .claude/checklists/readiness-gate.md
+- Passer .method/checklists/readiness-gate.md
 - Vérifier la cohérence entre PRD ↔ architecture ↔ design ↔ stories
 - Si KO : corriger les incohérences avant de continuer
 - Résumer : prêt à coder, voici la première story à implémenter
 ```
 
-**`/tm-dev` (la plus importante — usage quotidien) :**
+**`/dev` (la plus importante — usage quotidien) :**
 
 ```markdown
 # Implémente du code — story OU mode libre
@@ -251,16 +251,16 @@ les docs se construisent progressivement.
 - Aucun argument → mode libre (bugfix, amélioration, refacto)
 
 ## Mode Story (avec identifiant ou "next")
-1. Si "next" : lire .claude/sprint/status.md, trouver la prochaine story 🟢 Ready
+1. Si "next" : lire .method/sprint/status.md, trouver la prochaine story 🟢 Ready
 2. Lire la story complète dans docs/stories/
-3. Vérifier la checklist .claude/checklists/story-ready.md — si KO, signaler et s'arrêter
+3. Vérifier la checklist .method/checklists/story-ready.md — si KO, signaler et s'arrêter
 4. Lire le contexte :
    - La maquette design référencée (si elle existe)
    - docs/architecture.md (sections pertinentes)
    - docs/design/system.md (tokens, composants identifiés)
-   - .claude/conventions/component-registry.md
-   - .claude/conventions/coding-standards.md
-   - .claude/conventions/api-patterns.md
+   - .method/conventions/component-registry.md
+   - .method/conventions/coding-standards.md
+   - .method/conventions/api-patterns.md
 5. Implémenter dans cet ordre :
    a. Migration DB si nécessaire (supabase/migrations/)
    b. Schemas Zod partagés (lib/schemas/)
@@ -271,16 +271,16 @@ les docs se construisent progressivement.
 6. À CHAQUE COMMIT : ajouter une entrée dans docs/changelog.md
 7. Vérifier la non-régression (tous les tests existants passent)
 8. Mettre à jour la story : section Post-implémentation
-9. Mettre à jour .claude/conventions/component-registry.md
-10. Mettre à jour .claude/sprint/status.md (story → ✅ Done)
+9. Mettre à jour .method/conventions/component-registry.md
+10. Mettre à jour .method/sprint/status.md (story → ✅ Done)
 
 ## Mode Libre (sans argument — bugfix, amélioration, refacto)
 1. L'utilisateur décrit le problème ou l'amélioration souhaitée
 2. Lire le contexte existant :
    - docs/architecture.md
    - docs/design/system.md
-   - .claude/conventions/component-registry.md
-   - .claude/conventions/coding-standards.md
+   - .method/conventions/component-registry.md
+   - .method/conventions/coding-standards.md
    - Les fichiers de code concernés
 3. Analyser le problème, proposer un plan (fichiers à modifier, approche)
 4. Implémenter :
@@ -308,7 +308,7 @@ Chaque entrée :
 - Imports dans l'ordre : next/react → libs externes → @/components → @/lib → @/types → relatifs
 ```
 
-**`/tm-review` :**
+**`/revue` :**
 
 ```markdown
 # Code review
@@ -319,7 +319,7 @@ Argument : identifiant de la story (ex: E01-S01), "last" pour la dernière, ou r
 ## Process
 1. Identifier les fichiers à reviewer (story ou git diff)
 2. Lire tous les fichiers créés/modifiés
-3. Passer CHAQUE point de .claude/checklists/code-review.md :
+3. Passer CHAQUE point de .method/checklists/code-review.md :
    - Pour chaque item : verdict ✅ ou ❌ avec explication si KO
 4. Review adversariale :
    - Edge cases non gérés (null, vide, concurrent, permissions)
@@ -334,7 +334,7 @@ Argument : identifiant de la story (ex: E01-S01), "last" pour la dernière, ou r
 7. Résumer : X items OK, Y items fixés, Z items à discuter
 ```
 
-**`/tm-evolve` :**
+**`/plan` :**
 
 ```markdown
 # Évolution du PRD — quand le scope change
@@ -344,7 +344,7 @@ L'utilisateur décrit le changement souhaité.
 
 ## Process
 1. Modifier docs/prd.md — section concernée, statut 🔶 Draft
-2. Passer .claude/checklists/prd-evolution.md point par point :
+2. Passer .method/checklists/prd-evolution.md point par point :
    - Identifier les impacts sur architecture, epics, stories, design, DB, tests
 3. Pour chaque impact identifié :
    - Architecture → mettre à jour docs/architecture.md (+ ADR si invariant touché)
@@ -360,7 +360,7 @@ L'utilisateur décrit le changement souhaité.
 
 ### 3.3 — Templates de documents
 
-Chaque template est un fichier markdown dans `.claude/templates/` avec :
+Chaque template est un fichier markdown dans `.method/templates/` avec :
 - La structure du document (sections, sous-sections)
 - Des instructions entre `<!-- -->` pour guider le remplissage
 - Des exemples inline quand c'est utile
@@ -814,8 +814,8 @@ Exemple `docs/brief.md` :
 ```markdown
 # Brief Produit
 
-> Ce fichier sera généré par la commande `/tm-plan` (phase 1).
-> Template : .claude/templates/brief.tmpl.md
+> Ce fichier sera généré par la commande `/plan` (phase 1).
+> Template : .method/templates/brief.tmpl.md
 ```
 
 `docs/changelog.md` a un format spécifique (mis à jour automatiquement à chaque commit) :
@@ -839,7 +839,7 @@ Exemple `docs/brief.md` :
 Le README du template explique :
 1. Ce qu'est la Tiple Method (3 phrases)
 2. Comment démarrer (clone, personnaliser CLAUDE.md, `pnpm install`, `pnpm dev`)
-3. Le workflow en un schéma ASCII (2 phases : `/tm-plan` une fois → `/tm-dev` en boucle)
+3. Le workflow en un schéma ASCII (2 phases : `/plan` une fois → `/dev` en boucle)
 4. La liste des 6 commandes `/tm-*` avec description et usage
 5. Les 3 cas d'usage quotidiens : story planifiée, bugfix, amélioration
 6. La structure des dossiers
@@ -1004,19 +1004,19 @@ Tous les fichiers de config (package.json, tsconfig, tailwind, vitest, playwrigh
 Dépendances : E01.
 
 ### E03 — Templates de documents `P0`
-Les 6 fichiers `.claude/templates/*.tmpl.md`.
+Les 6 fichiers `.method/templates/*.tmpl.md`.
 Dépendances : E01.
 
 ### E04 — Checklists `P0`
-Les 5 fichiers `.claude/checklists/*.md`. La code-review checklist doit inclure des points spécifiques Next.js/Supabase (Server Component vs Client Component, RLS, etc.).
+Les 5 fichiers `.method/checklists/*.md`. La code-review checklist doit inclure des points spécifiques Next.js/Supabase (Server Component vs Client Component, RLS, etc.).
 Dépendances : E01.
 
 ### E05 — Conventions `P0`
-Les 5 fichiers `.claude/conventions/*.md` pré-remplis avec les patterns Next.js + Supabase détaillés dans ce PRD.
+Les 5 fichiers `.method/conventions/*.md` pré-remplis avec les patterns Next.js + Supabase détaillés dans ce PRD.
 Dépendances : E01.
 
 ### E06 — Slash Commands `P0`
-Les 6 fichiers `.claude/commands/tm-*.md`. `/tm-plan` est la commande de cadrage (fusionne brief+PRD+archi+design+stories+gate). `/tm-dev` est la commande quotidienne (story + mode libre pour bugs/améliorations, avec changelog à chaque commit). `/tm-review` fait la review adversariale. `/tm-evolve` gère les changements de scope.
+Les 6 fichiers `.claude/skills/tm-*.md`. `/plan` est la commande de cadrage (fusionne brief+PRD+archi+design+stories+gate). `/dev` est la commande quotidienne (story + mode libre pour bugs/améliorations, avec changelog à chaque commit). `/revue` fait la review adversariale. `/plan` gère les changements de scope.
 Dépendances : E03, E04, E05 (les commandes référencent les templates, checklists, et conventions).
 
 ### E07 — Validation end-to-end `P1`
@@ -1044,8 +1044,8 @@ Dépendances : E01-E06 toutes.
 |--------|--------|------------|
 | CLAUDE.md trop long → Claude Code ignore des parties | Élevé | Garder le CLAUDE.md < 150 lignes. Les règles Next.js/Supabase (section 3.1.2) sont le seul ajout technique inline — le reste pointe vers les fichiers conventions/ |
 | Templates trop prescriptifs → rigides pour certains projets | Moyen | Sections `<!-- PERSONNALISER -->` explicites. Garder les templates comme guides, pas comme formulaires |
-| Slash commands mal comprises → mauvais usage | Faible | 6 commandes seulement. 2 au quotidien (/tm-dev, /tm-status). README avec cas d'usage concrets |
-| Les checklists sont ignorées en pratique | Moyen | Les intégrer dans les slash commands (`/tm-dev` appelle automatiquement la story-ready checklist) |
+| Slash commands mal comprises → mauvais usage | Faible | 6 commandes seulement. 2 au quotidien (/dev, tm-status). README avec cas d'usage concrets |
+| Les checklists sont ignorées en pratique | Moyen | Les intégrer dans les slash commands (`/dev` appelle automatiquement la story-ready checklist) |
 | Dépendances npm obsolètes dans package.json | Moyen | Lister les versions majeures uniquement (ex: `"next": "^15"` pas `"15.1.3"`). Mettre à jour le template tous les trimestres |
 | Supabase clients mal configurés → bugs auth subtils | Élevé | Le scaffolding inclut les clients fonctionnels testés. Le middleware est pré-écrit. Documenter les pièges connus dans coding-standards.md |
 | Conventions trop spécifiques → bloquantes sur des cas edge | Faible | Les conventions sont des guidelines, pas des lois. La section `<!-- PERSONNALISER -->` et les ADRs permettent de dévier quand justifié |

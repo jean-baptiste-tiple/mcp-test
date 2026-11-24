@@ -21,6 +21,10 @@ test-results/
 playwright-report/
 .playwright-mcp/
 coverage/
+# Cache de Vitest 5
+.vitest/
+# Captures locales lues par la review (pnpm ui:shots), jamais versionnées
+.ui-shots/
 
 # Runs des campagnes Claude Code (pnpm bench:cc) : flux bruts et config MCP locale
 .bench/
@@ -48,7 +52,9 @@ tsconfig.tsbuildinfo
 
 # Claude Code
 .claude/*
-!.claude/commands/
 !.claude/settings.json
 !.claude/hooks/
 !.claude/skills/
+!.claude/agents/
+# Reçu de vérification : purement local, il atteste que les checks ont tourné sur CE code
+.claude/.verify-receipt.json

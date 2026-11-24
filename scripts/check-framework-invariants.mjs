@@ -1,0 +1,234 @@
+#!/usr/bin/env node
+/**
+ * Deuxième moitié de `check-framework` : ce qui porte sur le CODE et sur l'OUTILLAGE, là où le
+ * fichier principal ne vérifie que la cohérence documentaire du framework (tags, globs, skills,
+ * sections citées).
+ *
+ * La séparation n'est pas cosmétique : ces deux blocs répondent à une question différente.
+ * « Le framework se décrit-il correctement ? » d'un côté, « ses garanties sont-elles encore
+ * branchées ? » de l'autre. Le second est le seul à pouvoir échouer sur un projet dont la
+ * documentation est parfaite.
+ */
+import { existsSync, readdirSync } from 'node:fs'
+import { join, relative } from 'node:path'
+import { verifierManifeste } from './sync-method.mjs'
+
+/**
+ * @param {{ROOT: string, read: (p: string) => string, walk: (d: string, o?: string[]) => string[],
+ *          err: (m: string) => void, warn: (m: string) => void}} ctx
+ */
+export function verifierInvariants({ ROOT, read, walk, err, warn }) {
+  invariantsDeCode({ ROOT, read, walk, err })
+  chaineDApplication({ ROOT, read, err, warn })
+  invariantsDependabot({ ROOT, read, err, warn })
+  verifierManifeste(ROOT, err)
+  caracteresDeControle({ ROOT, read, walk, err })
+}
+
+/**
+ * Un chemin Windows écrit par un outil qui interprète les échappements (`C:\apps` devient `C:`,
+ * BEL, `pps`) laisse des octets invisibles à la relecture dans la méthode (treso-luciole,
+ * 2026-11-24). Tabulation, CR et LF exceptés.
+ */
+function caracteresDeControle({ ROOT, read, walk, err }) {
+  const racines = ['.method', '.claude'].map((d) => join(ROOT, d)).filter((d) => existsSync(d))
+  const fichiers = [...racines.flatMap((d) => walk(d)), join(ROOT, 'CLAUDE.md')]
+  for (const f of fichiers.filter((f) => f.endsWith('.md') && existsSync(f))) {
+    read(f).split('\n').forEach((ligne, i) => {
+      if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(ligne)) {
+        err(`${relative(ROOT, f).replace(/\\/g, '/')}:${i + 1} : caractère de contrôle invisible (chemin Windows décodé ?).`)
+      }
+    })
+  }
+}
+
+/** Tables créées par une migration sans que la même migration active la RLS. */
+function tablesSansRls(sql) {
+  const manquantes = []
+  for (const m of sql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([\w."]+)/gi)) {
+    const table = m[1].replace(/"/g, '').split('.').pop()
+    const rls = new RegExp(
+      `ALTER\\s+TABLE[^;]*\\b${table}\\b[^;]*ENABLE\\s+ROW\\s+LEVEL\\s+SECURITY`,
+      'is'
+    )
+    if (!rls.test(sql)) manquantes.push(table)
+  }
+  return manquantes
+}
+
+// ---------------- invariants de CLAUDE.md que rien ne vérifiait
+// Trois règles annoncées comme absolues et laissées au jugement. Elles sont mécanisables :
+// les laisser en prose, c'est accepter qu'elles se dégradent sans trace.
+function invariantsDeCode({ ROOT, read, walk, err }) {
+  // « RLS activée sur toute table » (CLAUDE.md § Invariants techniques)
+  const migrations = join(ROOT, 'supabase/migrations')
+  if (existsSync(migrations)) {
+    for (const f of readdirSync(migrations).filter((f) => f.endsWith('.sql'))) {
+      for (const table of tablesSansRls(read(join(migrations, f)))) {
+        err(
+          `supabase/migrations/${f} : table \`${table}\` créée sans \`ENABLE ROW LEVEL SECURITY\` dans la même migration.`
+        )
+      }
+    }
+  }
+
+  // « Deux page.tsx ne doivent jamais résoudre le même chemin » — Next ne le signale pas, il en
+  // choisit un en silence. Le template s'y était fait prendre : `/` était servi par un redirect
+  // vers une route inexistante, et la page du route group n'était jamais rendue.
+  const appDir = join(ROOT, 'src/app')
+  if (existsSync(appDir)) {
+    const routes = new Map()
+    for (const p of walk(appDir).filter((p) => /[\\/]page\.tsx?$/.test(p))) {
+      const rel = p.slice(appDir.length + 1)
+      const chemin =
+        '/' +
+        rel
+          .replace(/\/?page\.tsx?$/, '')
+          .split('/')
+          .filter((s) => !/^\(.*\)$/.test(s))
+          .join('/')
+      if (routes.has(chemin)) {
+        err(
+          `Deux page.tsx résolvent \`${chemin}\` : ${routes.get(chemin)} et ${rel}. Next n'échoue pas, il en choisit un en silence.`
+        )
+      } else routes.set(chemin, rel)
+    }
+  }
+}
+
+// ------------------------- la chaîne d'application est-elle encore branchée ?
+// Jusqu'ici le vérificateur ne contrôlait que la cohérence DOCUMENTAIRE. On pouvait vider
+// settings.json de ses hooks, réduire enforce-git-gate.mjs à `process.exit(0)` ou remplacer
+// `type-check` par `echo ok` : exit 0 dans les trois cas. Toutes les garanties du framework
+// étaient désactivables sans que son propre check bronche.
+function chaineDApplication({ ROOT, read, err, warn }) {
+  const pkgPath = join(ROOT, 'package.json')
+  if (existsSync(pkgPath)) {
+    const scripts = JSON.parse(read(pkgPath)).scripts ?? {}
+    const ATTENDUS = {
+      'check:framework': /node\s+scripts\/check-framework\.mjs/,
+      'type-check': /tsc\s+--noEmit/,
+      lint: /eslint/,
+      test: /vitest/,
+      verify: /check:framework.*type-check.*lint.*test.*verify-receipt\.mjs\s+write/s,
+    }
+    for (const [nom, motif] of Object.entries(ATTENDUS)) {
+      if (!scripts[nom]) {
+        err(`package.json : script \`${nom}\` absent — \`pnpm verify\` ne peut plus l'enchaîner.`)
+      } else if (!motif.test(scripts[nom])) {
+        err(`package.json : script \`${nom}\` ne lance plus ce qu'il annonce (« ${scripts[nom]} »).`)
+      }
+    }
+    if (scripts.lint && !/--max-warnings\s+0/.test(scripts.lint)) {
+      err(
+        "package.json : `lint` sans `--max-warnings 0` — les règles ESLint en `warn` ne bloquent rien, alors que les conventions les annoncent « appliquées par l'outillage »."
+      )
+    }
+  }
+
+  // Un hook déclaré mais vidé de sa substance est pire qu'un hook absent : il donne l'illusion
+  // d'une garantie. On ne valide pas le contenu ligne à ligne, seulement qu'il refuse quelque chose.
+  for (const f of ['enforce-git-gate.mjs', 'enforce-bash-rules.mjs', 'coordinate-sessions.mjs']) {
+    const p = join(ROOT, '.claude/hooks', f)
+    if (!existsSync(p)) {
+      err(`.claude/hooks/${f} absent — la garantie qu'il porte n'existe plus.`)
+      continue
+    }
+    if (!/process\.exit\(2\)/.test(read(p))) {
+      err(`.claude/hooks/${f} ne contient aucun \`process.exit(2)\` — il ne bloque plus rien.`)
+    }
+  }
+
+  // Les hooks de commande doivent voir les deux outils shell : un `git commit` lancé par l'outil
+  // PowerShell passait sans gate, et un verify lancé de PowerShell gelait sa propre session
+  // (app-pmo, 2026-11-24).
+  const settingsPath = join(ROOT, '.claude/settings.json')
+  if (existsSync(settingsPath)) {
+    const entrees = JSON.parse(read(settingsPath)).hooks?.PreToolUse ?? []
+    for (const f of ['enforce-git-gate.mjs', 'enforce-bash-rules.mjs', 'coordinate-sessions.mjs']) {
+      const matchers = entrees
+        .filter((e) => (e.hooks ?? []).some((h) => String(h.command ?? '').includes(f)))
+        .map((e) => String(e.matcher ?? ''))
+      if (!matchers.length) continue
+      const voit = (outil) => matchers.some((m) => new RegExp(`(?:^|\\|)${outil}(?:$|\\|)`).test(m))
+      if (!voit('Bash') || !voit('PowerShell')) {
+        err(`.claude/settings.json : ${f} ne surveille pas Bash et PowerShell (matcher « ${matchers.join(' / ')} »).`)
+      }
+    }
+  }
+
+  // Le hook git couvre les commits lancés depuis un script, invisibles au hook PreToolUse.
+  const preCommit = join(ROOT, '.githooks/pre-commit')
+  if (!existsSync(preCommit)) {
+    warn(".githooks/pre-commit absent — un `git commit` lancé depuis un script n'est contrôlé par rien.")
+  } else if (!/verify-receipt/.test(read(preCommit))) {
+    err('.githooks/pre-commit ne vérifie plus le reçu.')
+  }
+}
+
+// ------------------------------- un pin de package.json est-il protégé de Dependabot ?
+// `versioning-strategy: increase` réécrit la plage : un pin exact ou tilde sans entrée `ignore`
+// sur les mineures reçoit chaque semaine une PR qui le casse, et la raison du pin (tech-stack.md)
+// n'est relue par personne au moment du merge.
+const DEPENDABOT = 'deployment-patterns.md § Dependabot'
+
+/**
+ * Entrées `ignore` de l'écosystème npm, sans dépendance YAML. Parseur minimal pour le format
+ * écrit par le template : une entrée commence par `- dependency-name:` (valeur avec ou sans
+ * guillemets, commentaire de fin de ligne toléré) et sa ligne `update-types: [...]` suit.
+ * Une syntaxe YAML plus libre (liste multi-ligne, ancres) n'est pas lue.
+ */
+function ignoresNpm(yaml) {
+  const entrees = []
+  let ecosysteme = null
+  let courante = null
+  for (const l of yaml.split(/\r?\n/)) {
+    const eco = /^\s*-\s*package-ecosystem:\s*["']?([\w-]+)/.exec(l)
+    if (eco) {
+      ecosysteme = eco[1]
+      courante = null
+      continue
+    }
+    if (ecosysteme !== 'npm') continue
+    const nom = /^\s*-\s*dependency-name:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))/.exec(l)
+    const types = /^\s*update-types:\s*\[([^\]]*)\]/.exec(l)
+    if (nom) {
+      courante = { nom: nom[1] ?? nom[2] ?? nom[3], types: [] }
+      entrees.push(courante)
+    } else if (types && courante) {
+      courante.types = types[1].split(',').map((t) => t.trim().replace(/^["']|["']$/g, ''))
+      courante = null
+    }
+  }
+  return entrees
+}
+
+function invariantsDependabot({ ROOT, read, err, warn }) {
+  const pkgPath = join(ROOT, 'package.json')
+  if (!existsSync(pkgPath)) return
+  const pkg = JSON.parse(read(pkgPath))
+  const pins = Object.entries({ ...pkg.dependencies, ...pkg.devDependencies }).filter(([, spec]) =>
+    /^[\d~]/.test(spec)
+  )
+
+  const configPath = join(ROOT, '.github/dependabot.yml')
+  if (!existsSync(configPath)) {
+    warn(`Dependabot non configuré (.github/dependabot.yml absent) : aucune mise à jour de dépendance n'est proposée (${DEPENDABOT}).`)
+    return
+  }
+  const entrees = ignoresNpm(read(configPath))
+  const ignore = (nom, type) => entrees.some((e) => e.nom === nom && e.types.includes(type))
+
+  for (const [nom, spec] of pins) {
+    if (!ignore(nom, 'version-update:semver-minor')) {
+      err(
+        `package.json : \`${nom}\` épinglé en \`${spec}\` sans entrée \`ignore\` sur les mineures dans .github/dependabot.yml — Dependabot proposera de casser le pin (${DEPENDABOT}).`
+      )
+    }
+  }
+  if (!ignore('*', 'version-update:semver-major')) {
+    err(
+      `.github/dependabot.yml : les majeures ne sont pas ignorées globalement ; une majeure est une décision de tech-stack.md, pas une PR hebdomadaire (${DEPENDABOT}).`
+    )
+  }
+}

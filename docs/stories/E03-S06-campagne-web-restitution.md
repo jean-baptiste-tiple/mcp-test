@@ -40,7 +40,7 @@ Les hosts web se pilotent par le navigateur (Playwright MCP, sessions de JB), le
 
 ### Fichiers à modifier
 - `docs/bench/results-oauth.md`, `docs/decisions/ADR-004-auth-assistants-supabase-oauth.md`
-- `.claude/conventions/mcp-patterns.md` §6 seulement si une mesure contredit une règle datée (statut + date, comme en E01-S05)
+- `.method/conventions/mcp-patterns.md` §6 seulement si une mesure contredit une règle datée (statut + date, comme en E01-S05)
 
 ### Patterns à suivre
 - `mcp-patterns.md` §8 (gestes de rafraîchissement par host, recoupement)

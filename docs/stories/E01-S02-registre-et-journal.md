@@ -53,9 +53,9 @@ Cœur du banc : les tools, instructions et serverInfo viennent de la base à cha
 - Suppression : `src/mcp/tools/get-status.ts`, `src/lib/schemas/status.ts`, `src/lib/services/status-service.ts`
 
 ### Patterns à suivre
-- `.claude/conventions/mcp-patterns.md` §4 (résultats deux formes, erreurs actionnables), §7, §10
-- `.claude/conventions/database-patterns.md`, `supabase-patterns.md` (RLS)
-- `.claude/conventions/security-patterns.md` (plafonds de taille, secrets)
+- `.method/conventions/mcp-patterns.md` §4 (résultats deux formes, erreurs actionnables), §7, §10
+- `.method/conventions/database-patterns.md`, `supabase-patterns.md` (RLS)
+- `.method/conventions/security-patterns.md` (plafonds de taille, secrets)
 - Point d'attention architecture n°1 : si `createMcpHandler` ne peut pas être instancié par requête, basculer sur `WebStandardStreamableHTTPServerTransport` du SDK et le noter en post-implémentation
 
 ## Tests attendus

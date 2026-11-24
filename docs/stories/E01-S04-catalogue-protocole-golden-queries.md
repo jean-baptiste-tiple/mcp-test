@@ -46,7 +46,7 @@ Les scénarios sont des données : cette story fournit le catalogue générateur
 - `README.md` : section « Scénarios » (seed, activation dans Studio)
 
 ### Patterns à suivre
-- `.claude/conventions/mcp-patterns.md` §3 (les sondes gardent le format « Use this when… »), §8 (golden queries)
+- `.method/conventions/mcp-patterns.md` §3 (les sondes gardent le format « Use this when… »), §8 (golden queries)
 - Le script ne doit jamais désactiver ou activer un scénario : l'activation reste un geste explicite dans Studio ou par SQL
 
 ## Tests attendus

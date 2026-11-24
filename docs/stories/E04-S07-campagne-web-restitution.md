@@ -36,7 +36,7 @@ Les hosts web se pilotent par le navigateur (Playwright MCP, sessions de JB) com
 
 ### Fichiers à modifier
 - `docs/bench/results-proto.md`, `docs/proto-golden-queries.md`
-- `.claude/conventions/mcp-patterns.md` seulement si une mesure contredit une règle datée (statut + date, comme en E01-S05)
+- `.method/conventions/mcp-patterns.md` seulement si une mesure contredit une règle datée (statut + date, comme en E01-S05)
 
 ### Patterns à suivre
 - `mcp-patterns.md` §8 (geste de rafraîchissement par host, recoupement)
