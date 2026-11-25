@@ -11,6 +11,14 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-11-25] — Méthode : synchro du template (0d807e0)
+**Quoi :** 23 règles de design contrôlables sur capture (`ui-patterns.md`, `design-review.md`, agents `designer` et `design-critic`, gabarit `design-brief.tmpl.md`) ; reçu fondé sur le contenu de l'arbre (un commit du même arbre ne l'invalide plus, `commit-push` : rebase sans rejouer les checks) ; `check:framework` ignore `.claude/worktrees/`. Fusion de `check-framework-invariants.mjs` et de son test : invariants UI du template toujours retirés.
+**Pourquoi :** correctifs et règles publiés par le template depuis la synchro du 24/11.
+Tests de méthode sortis de `pnpm test` (`vitest.config.ts`, exclusion levée par `METHOD_TESTS=1`), lancés à part.
+**Problèmes :** `pnpm verify` sortait deux fois sur deux en `Timeout calling "onTaskUpdate"` de Vitest 3 (478 tests verts, une erreur non gérée), après l'ajout d'un test de reçu au `hooks.test.ts` du template. Même adaptation que mcp-cv-editor.
+**Écarté :** `--take` des deux fichiers fusionnés : il aurait réintroduit les invariants UI retirés par le projet. Monter Vitest à la version du template : décision de stack, hors de cette synchro.
+**Fichiers :** `vitest.config.ts`, `CLAUDE.md`, `.claude/agents/{designer,design-critic}.md`, `.claude/hooks/enforce-git-gate.mjs`, `.claude/skills/commit-push/SKILL.md`, `.method/checklists/design-review.md`, `.method/conventions/ui-patterns.md`, `.method/templates/design-brief.tmpl.md`, `.method/sync-state.json`, `scripts/{check-framework,check-framework-invariants,verify-receipt}.mjs`, `tests/unit/{hooks,check-framework-invariants}.test.ts`
+
 ## [2026-11-25] — Stack : Next 16
 **Quoi :** `next` 16.4.6, `react` et `react-dom` 19.3.1, `@types/react(-dom)` 19.3, `eslint-config-next` 16.4.6 (ESLint reste en 9). `src/middleware.ts` devient `src/proxy.ts` (export `proxy`) ; `tests/unit/middleware.test.ts` devient `proxy.test.ts` et asserte l'export nommé. `eslint.config.mjs` en flat config native, `@eslint/eslintrc` retiré. `next-env.d.ts` sort du suivi git ; `tsconfig.json` en `jsx: react-jsx` avec `.next/dev/types`. `agentRules: false` dans `next.config.ts`. ADR-005, `tech-stack.md`, `CLAUDE.md` et `docs/architecture.md` alignés.
 **Pourquoi :** montée de stack alignée sur le template dev-framework. SDK MCP 1.26 et `mcp-handler` 1.1 inchangés, routes MCP vérifiées au build.
