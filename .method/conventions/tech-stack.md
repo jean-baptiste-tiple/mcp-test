@@ -1,6 +1,6 @@
 # Stack Technique
 
-> Dernière MAJ : 2026-11-25 (Next 16 ; versions d'origine figées en E01-S01)
+> Dernière MAJ : 2026-11-25 (Next 16, Vitest 5 ; versions d'origine figées en E01-S01)
 
 | Techno | Version | Rôle | Justification |
 |--------|---------|------|---------------|
@@ -18,7 +18,8 @@
 | Shadcn/ui | latest | Composants UI | Copy-paste, personnalisables, accessibles, basés sur Radix |
 | Zod | 3.x | Validation | Schemas partagés front/back, inférence TypeScript |
 | React Hook Form | 7.x | Formulaires | Performance, intégration Zod via resolver |
-| Vitest | 3.2.4 | Tests unit/integ | Rapide, compatible ESM, API Jest-like |
+| Vitest | 5.1.1 | Tests unit/integ | Rapide, compatible ESM, API Jest-like. Config `vitest.config.mts` (ESM natif, `import.meta.dirname`) |
+| Vite + @vitejs/plugin-react | 8.3.8, 6.3.0 | Pairs de Vitest 5 (transform JSX des tests) | Aucun build Vite dans le banc |
 | Testing Library | latest | Tests composants | Test du comportement user, pas de l'implémentation |
 | Playwright | latest | Tests E2E | Cross-browser, fiable, auto-wait |
 
@@ -32,6 +33,6 @@
 | mcp-handler | **1.1.0** (épinglé `^1.1.0`) | Endpoint MCP dans Next.js (`/api/mcp`) | Transport Streamable HTTP sur route handler (`src/app/api/[transport]`), stateless (ADR-001). `pnpm add mcp-handler` sans contrainte installe 2.2.0 (peer `@modelcontextprotocol/server@^2`) |
 | MCP Apps (GA 2026-01-26) — resources `ui://` | non installé | Widgets visuels dans Claude/ChatGPT | Hors scope du banc (ADR-002). Référence template : bundles `ui://` en `text/html;profile=mcp-app` + variante `-skybridge`, triple méta |
 | @modelcontextprotocol/ext-apps | non installé (réf. template : 1.7.4) | SDK côté widget | Hors scope du banc |
-| Vite + vite-plugin-singlefile | non installé | Build des widgets | Hors scope du banc |
+| vite-plugin-singlefile | non installé (Vite présent pour Vitest seul) | Build des widgets | Hors scope du banc |
 | jose | non installé (réf. template : 6.x) | Validation JWT (JWKS Supabase) | Reviendra avec E03 (OAuth) |
 | @anthropic-ai/sdk | non installé | IA serveur | Zéro IA serveur (règle Tiple) |
