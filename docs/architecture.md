@@ -29,7 +29,7 @@ Aucune interface web propre au banc. Aucune IA serveur.
 
 | Techno | Version | Rôle | Justification |
 |--------|---------|------|---------------|
-| Next.js | 15 (App Router) | Framework | Route handler `/api/[transport]` |
+| Next.js | 16 (App Router) | Framework | Route handler `/api/[transport]` |
 | TypeScript | ~5.8.3 (strict) | Typage | Épinglé 5.8.x (hangs tsc en 5.9) |
 | Supabase | Cloud, projet `nwdmkehnxvqyxddgogtu` | Postgres | Tables du banc, Studio comme admin |
 | @supabase/supabase-js | 2.x | Client serveur | Accès aux tables avec la clé secrète (ADR-002) |
@@ -382,7 +382,7 @@ src/app/(auth)/layout.tsx, login/page.tsx, login-form.tsx         # starter supa
 src/app/(auth)/oauth/consent/page.tsx, actions.ts, consent-form.tsx, consent-journal.ts  # consentement du serveur OAuth Supabase (groupe (auth) pour son layout ; URL inchangée)
 src/app/(auth)/auth-test/grants/page.tsx, actions.ts, revoke-button.tsx  # clients autorisés, révocation, déconnexion
 src/components/scope-list.tsx                                     # liste des scopes (consentement, clients autorisés)
-src/middleware.ts                                                 # session Supabase sur /login, /oauth/*, /auth-test/* seulement ; X-Frame-Options: DENY
+src/proxy.ts                                                      # proxy Next 16 (ex-middleware.ts) : session Supabase sur /login, /oauth/*, /auth-test/* seulement ; X-Frame-Options: DENY
 src/lib/supabase/server.ts                                        # starter (cookies) ; client.ts non créé : aucun composant client ne parle à Supabase
 src/lib/actions/auth.ts, src/lib/schemas/auth.ts                  # login, logout ; loginSchema, safeRedirect, loginPath, consentPath
 src/auth-test/
@@ -422,11 +422,11 @@ src/types/oauth-test-database.ts
 - `/login` : email + mot de passe (`signInWithPassword`), `redirect` relatif seulement ; pas de signup, de reset ni de lien magique.
 - `/oauth/consent?authorization_id=…` : sans session → `/login?redirect=…` ; `getAuthorizationDetails` : déjà consenti → redirection ; sinon client (nom, uri, logo), `redirect_uri`, scopes, compte ; Autoriser → `approveAuthorization(id, { skipBrowserRedirect: true })` → `redirect(redirect_url)` ; Refuser → `denyAuthorization`. Marque de l'organisation dont l'hôte est celui de la page si elle existe (sinon « Banc MCP »). Chaque affichage et décision au journal (`consent`) ; stage `auto` (déjà consenti) : Supabase ne rend que `redirect_url`, la ligne porte alors `client: null`.
 - `/auth-test/grants` : `listGrants`, `revokeGrant({ clientId })`, déconnexion par `signOut({ scope: "local" })` (un `global` couperait les sessions des assistants).
-- Middleware : matcher `/login`, `/oauth/:path*`, `/auth-test/:path*` ; tout le reste (`/api/*`, `/.well-known/*`, `/`, `/design-system`) hors matcher.
+- Proxy (ex-middleware, `src/proxy.ts`) : matcher `/login`, `/oauth/:path*`, `/auth-test/:path*` ; tout le reste (`/api/*`, `/.well-known/*`, `/`, `/design-system`) hors matcher.
 
 ### 10.6 Tests
 
-- Unit, sans réseau : métadonnées par hôte ; 401 par hôte (jeton absent, expiré, signé par une autre clé, autre `iss`) avec une JWKS locale injectée ; résumé de claims ; garde de redirection du login ; matcher du middleware ; page de consentement avec SDK simulé.
+- Unit, sans réseau : métadonnées par hôte ; 401 par hôte (jeton absent, expiré, signé par une autre clé, autre `iss`) avec une JWKS locale injectée ; résumé de claims ; garde de redirection du login ; matcher et export du proxy ; page de consentement avec SDK simulé.
 - Intégration, sur le Supabase du banc : organisations jetables à hôtes jetables, utilisateurs jetables créés par `auth.admin.createUser` puis supprimés, jeton réel obtenu par `signInWithPassword` (même clé de signature que le serveur OAuth) : whoami membre, refus non-membre, retrait puis refus, RLS de `members`, seed idempotent. `tests/integration/auth-test-*.test.ts`, sautés sans clés.
 - Smoke HTTP après déploiement : 401 et métadonnées sur les deux hôtes, `pnpm mcp:smoke` inchangé sur `/api/mcp`.
 
@@ -448,7 +448,7 @@ src/types/oauth-test-database.ts
 ## Invariants
 
 Ces choix ne changent JAMAIS sans ADR documenté :
-- Next.js 15 App Router
+- Next.js 16 App Router (ADR-005)
 - TypeScript strict mode
 - Supabase pour la DB, RLS activé sur toute table
 - Zod pour toute validation d'entrée mutante

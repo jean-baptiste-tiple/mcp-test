@@ -1,12 +1,14 @@
 # Stack Technique
 
-> Dernière MAJ : 2026-09-22 (E01-S01)
+> Dernière MAJ : 2026-11-25 (Next 16 ; versions d'origine figées en E01-S01)
 
 | Techno | Version | Rôle | Justification |
 |--------|---------|------|---------------|
 | Node.js | 24.14.0 | Runtime | |
 | pnpm | 12.4.1 (`packageManager`) | Package manager | Rapide, strict, disk-efficient. ≥ 10 : scripts postinstall des dépendances bloqués par défaut (`onlyBuiltDependencies`) |
-| Next.js | 15.5.12 (App Router) | Framework fullstack | SSR/SSG, Server Components, Server Actions, routing fichiers |
+| Next.js | 16.4.6 (App Router), `^16.4.6` | Framework fullstack | SSR/SSG, Server Components, Server Actions, routing fichiers. `src/proxy.ts` (export `proxy`) remplace `middleware.ts` (`auth-patterns.md § Proxy (ex-middleware)`). `pnpm type-check` lance `next typegen` avant `tsc` ; `next-env.d.ts` n'est plus versionné (son contenu alterne dev/build). `agentRules: false` dans `next.config.ts` : pas d'`AGENTS.md` généré, les règles vivent dans `CLAUDE.md` |
+| React | 19.3.1 (`^19.3.1`) | UI | |
+| ESLint | 9 + `eslint-config-next` 16 | Lint | Flat config native (`defineConfig`, `globalIgnores`), plus de `@eslint/eslintrc`. `eslint-plugin-react-hooks` 7 (tiré par `eslint-config-next` 16) : règles React Compiler actives, sans override ni règle désactivée (aucun problème relevé au 2026-11-25, contrairement aux dépôts qui le retiennent en 5) |
 | TypeScript | ~5.8.3 (strict mode) | Typage | Sécurité du code, autocomplétion, refactoring. **Épinglé 5.8.x** — les versions 5.9+ causent des hangs de `tsc --noEmit`. |
 | Supabase | Cloud, projet `nwdmkehnxvqyxddgogtu` | Backend-as-a-Service | DB PostgreSQL, RLS. Auth/OAuth réservés à E03 |
 | @supabase/supabase-js | 2.116.0 | Client Supabase serveur | `src/lib/supabase/admin.ts` (clé secrète, `server-only`) — ADR-002 |

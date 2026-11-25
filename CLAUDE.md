@@ -6,10 +6,10 @@ un produit. Trois serveurs : bench (`src/mcp/`, tools en base `bench_*`), proto 
 schéma `proto`) et auth-test (`src/auth-test/`, schéma `oauth_test`, OAuth 2.1 Supabase). Leurs
 dérogations volontaires aux règles MCP : `docs/decisions/ADR-002-derogations-banc.md`.
 
-Stack actuelle : Next.js 15 (App Router) · TypeScript strict · Tailwind 4 · Shadcn/ui · zod 3 ·
+Stack actuelle : Next.js 16 (App Router) · TypeScript strict · Tailwind 4 · Shadcn/ui · zod 3 ·
 `@modelcontextprotocol/sdk` 1.26 + `mcp-handler` 1 (route `src/app/api/[transport]/`), sans widgets.
-La montée vers la stack du template (Next 16, zod 4, SDK MCP 2 : ADR-002 du template) n'est pas
-faite : là où une convention décrit le SDK 2, le code suit encore le SDK 1. Versions exactes : `.method/conventions/tech-stack.md`.
+La montée vers la stack du template est faite pour Next 16 (ADR-005) ; zod 4 et le SDK MCP 2
+(ADR-002 du template) restent à faire : là où une convention décrit le SDK 2, le code suit encore le SDK 1. Versions exactes : `.method/conventions/tech-stack.md`.
 IA : **zéro IA serveur** — les opérations intelligentes passent par le modèle de l'host
 (`prepare → modèle → save validé`, `mcp-patterns.md` § 4 bis). Un appel LLM serveur se décide par ADR.
 
