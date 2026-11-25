@@ -3,6 +3,9 @@ node_modules/
 
 # Next.js
 .next/
+# Next 16 le régénère (`next typegen`, lancé par `pnpm type-check`) et son contenu alterne entre
+# dev et build : versionné, il salirait l'arbre à chaque commande.
+next-env.d.ts
 out/
 dist/
 build/

@@ -20,8 +20,8 @@ export async function createClient() {
           try {
             cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
           } catch {
-            // Appelé depuis un Server Component, qui ne peut pas écrire de cookie : le middleware
-            // rafraîchit la session de ces pages (src/middleware.ts).
+            // Appelé depuis un Server Component, qui ne peut pas écrire de cookie : le proxy
+            // rafraîchit la session de ces pages (src/proxy.ts, ex-middleware).
           }
         },
       },

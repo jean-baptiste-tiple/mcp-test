@@ -12,7 +12,11 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { loginPath } from "@/lib/schemas/auth"
 
-export async function middleware(request: NextRequest) {
+// Next 16 : `proxy.ts` et l'export `proxy` remplacent `middleware.ts` et `middleware`. Un fichier
+// ou un export mal nommé n'est pas une erreur de build : Next ne l'exécute simplement pas, et les
+// pages d'auth perdent le rafraîchissement de session. Verrouillé par `tests/unit/proxy.test.ts`.
+// Runtime nodejs uniquement (plus d'Edge), ce que `@supabase/ssr` accepte.
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(

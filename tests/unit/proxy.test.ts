@@ -1,5 +1,5 @@
 // @vitest-environment node
-// Middleware des pages d'auth (E03-S03) : le matcher ne couvre que /login, /oauth/* et /auth-test/*, donc
+// Proxy des pages d'auth (E03-S03, ex-middleware : Next 16) : le matcher ne couvre que /login, /oauth/* et /auth-test/*, donc
 // /api/*, /.well-known/*, / et /design-system restent hors session par construction (mcp-patterns §6 bis) ;
 // une page protégée chargée sans session renvoie vers /login avec son chemin dans `redirect`, jamais un POST
 // de Server Action ; une session rafraîchie (setAll) garde ses cookies et ses en-têtes ; une page servie ne
@@ -18,7 +18,9 @@ vi.mock("@supabase/ssr", () => ({
   },
 }))
 
-import { config, middleware } from "@/middleware"
+import * as proxyModule from "@/proxy"
+
+const { config, proxy } = proxyModule
 
 const ORIGIN = "https://mcp-test-acme.vercel.app"
 const USER = { id: "user-1", email: "jb@example.test" }
@@ -47,23 +49,30 @@ describe("config.matcher", () => {
     "/.well-known/oauth-protected-resource",
     "/.well-known/oauth-protected-resource/api/auth-test/mcp",
     "/design-system",
-  ])("%s : hors du middleware", (path) => {
+  ])("%s : hors du proxy", (path) => {
     expect(matches(path)).toBe(false)
   })
 
   it.each(["/login", "/oauth/consent", "/oauth/consent?authorization_id=abc", "/auth-test/grants"])(
-    "%s : dans le middleware",
+    "%s : dans le proxy",
     (path) => {
       expect(matches(path)).toBe(true)
     }
   )
 })
 
-describe("middleware", () => {
+describe("proxy", () => {
+  // Next 16 n'exécute que l'export `proxy` de `src/proxy.ts` : un nom faux ne casse ni le type-check ni
+  // le build, le proxy ne tourne plus et les pages d'auth perdent le rafraîchissement de session.
+  it("expose l'export nommé `proxy`, et plus `middleware`", () => {
+    expect(typeof proxyModule.proxy).toBe("function")
+    expect("middleware" in proxyModule).toBe(false)
+  })
+
   it("page protégée sans session : /login, chemin et query dans redirect", async () => {
     signedIn(false)
 
-    const response = await middleware(new NextRequest(`${ORIGIN}/oauth/consent?authorization_id=abc`))
+    const response = await proxy(new NextRequest(`${ORIGIN}/oauth/consent?authorization_id=abc`))
 
     expect(response.status).toBe(307)
     expect(response.headers.get("location")).toBe(
@@ -74,7 +83,7 @@ describe("middleware", () => {
   it("/auth-test/grants sans session : /login?redirect=/auth-test/grants", async () => {
     signedIn(false)
 
-    const response = await middleware(new NextRequest(`${ORIGIN}/auth-test/grants`))
+    const response = await proxy(new NextRequest(`${ORIGIN}/auth-test/grants`))
 
     expect(new URL(response.headers.get("location") ?? "").searchParams.get("redirect")).toBe("/auth-test/grants")
   })
@@ -82,7 +91,7 @@ describe("middleware", () => {
   it("POST de Server Action sans session : pas de redirection, l'action revérifie la session elle-même", async () => {
     signedIn(false)
 
-    const response = await middleware(
+    const response = await proxy(
       new NextRequest(`${ORIGIN}/oauth/consent?authorization_id=abc`, { method: "POST", headers: { "next-action": "7f3a9c" } })
     )
 
@@ -94,7 +103,7 @@ describe("middleware", () => {
   it("/login sans session : servi, pas de boucle", async () => {
     signedIn(false)
 
-    const response = await middleware(new NextRequest(`${ORIGIN}/login`))
+    const response = await proxy(new NextRequest(`${ORIGIN}/login`))
 
     expect(response.headers.get("location")).toBeNull()
     expect(response.headers.get("x-middleware-next")).toBe("1")
@@ -104,7 +113,7 @@ describe("middleware", () => {
     signedIn(true)
 
     for (const path of ["/login", "/oauth/consent?authorization_id=abc", "/auth-test/grants"]) {
-      const response = await middleware(new NextRequest(`${ORIGIN}${path}`))
+      const response = await proxy(new NextRequest(`${ORIGIN}${path}`))
       expect(response.headers.get("location")).toBeNull()
       expect(response.headers.get("x-middleware-next")).toBe("1")
       // Consentement jamais dans un cadre (clickjacking).
@@ -118,7 +127,7 @@ describe("middleware", () => {
       return { data: { user: USER }, error: null }
     })
 
-    const response = await middleware(new NextRequest(`${ORIGIN}/oauth/consent?authorization_id=abc`))
+    const response = await proxy(new NextRequest(`${ORIGIN}/oauth/consent?authorization_id=abc`))
 
     expect(response.headers.get("x-middleware-next")).toBe("1")
     expect(response.cookies.get("sb-test-auth-token")?.value).toBe("refreshed")

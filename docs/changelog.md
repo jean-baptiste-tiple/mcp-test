@@ -11,6 +11,13 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-11-25] — Stack : Next 16
+**Quoi :** `next` 16.4.6, `react` et `react-dom` 19.3.1, `@types/react(-dom)` 19.3, `eslint-config-next` 16.4.6 (ESLint reste en 9). `src/middleware.ts` devient `src/proxy.ts` (export `proxy`) ; `tests/unit/middleware.test.ts` devient `proxy.test.ts` et asserte l'export nommé. `eslint.config.mjs` en flat config native, `@eslint/eslintrc` retiré. `next-env.d.ts` sort du suivi git ; `tsconfig.json` en `jsx: react-jsx` avec `.next/dev/types`. `agentRules: false` dans `next.config.ts`. ADR-005, `tech-stack.md`, `CLAUDE.md` et `docs/architecture.md` alignés.
+**Pourquoi :** montée de stack alignée sur le template dev-framework. SDK MCP 1.26 et `mcp-handler` 1.1 inchangés, routes MCP vérifiées au build.
+**Problèmes :** l'ancien `FlatCompat` plante sur le config 16. `eslint-config-next` 16 tire `eslint-plugin-react-hooks` 7 (règles React Compiler) : aucun problème relevé ici, gardé sans override.
+**Écarté :** garder `middleware.ts`, encore accepté par Next 16 mais déprécié : le renommage aurait été repoussé à la majeure suivante, sans test qui verrouille le nom. Retenir `eslint-plugin-react-hooks` en 5 comme les autres dépôts : surface sans effet ici.
+**Fichiers :** `package.json`, `pnpm-lock.yaml`, `eslint.config.mjs`, `next.config.ts`, `tsconfig.json`, `.gitignore`, `next-env.d.ts` (retiré), `src/proxy.ts` (ex-`src/middleware.ts`), `src/lib/supabase/server.ts` (commentaire), `tests/unit/proxy.test.ts` (ex-`middleware.test.ts`), `.method/conventions/tech-stack.md`, `docs/decisions/ADR-005-next-16.md`, `docs/architecture.md`, `CLAUDE.md`.
+
 ## [2026-11-24] — Méthode : migration Tiple vers la méthode du template
 **Quoi :** conventions, checklists, templates, starters et sprint déplacés de `.claude/` vers `.method/` (`git mv`) ; commands, skills par tag et hook `.sh` remplacés par les 9 skills, 5 agents et 3 hooks du template ; synchro `sync-method` (`--reviewed`) ; `verify` via `long-run`, gate de commit et hook git.
 **Pourquoi :** le dépôt suivait l'ancienne méthode Tiple, que le template a remplacée.
