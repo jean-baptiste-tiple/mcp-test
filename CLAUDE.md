@@ -10,11 +10,6 @@ Stack actuelle : Next.js 16 (App Router) · TypeScript strict · Tailwind 4 · S
 `@modelcontextprotocol/sdk` 1.26 + `mcp-handler` 1 (route `src/app/api/[transport]/`), sans widgets.
 La montée vers la stack du template est faite pour Next 16 (ADR-005) ; zod 4 et le SDK MCP 2
 (ADR-002 du template) restent à faire : là où une convention décrit le SDK 2, le code suit encore le SDK 1. Versions exactes : `.method/conventions/tech-stack.md`.
-Tests de méthode (`tests/unit/{hooks,check-framework-invariants,long-run,sync-method}.test.ts`) hors
-de `pnpm test` par `vitest.config.ts` : sous Vitest 3, la suite complète sort en `Timeout calling
-"onTaskUpdate"`. À réintégrer à la montée Vitest 5 (lot stack) ; d'ici là, après toute synchro ou
-tout changement de la méthode, à la main : `METHOD_TESTS=1 pnpm exec vitest run tests/unit/hooks.test.ts`
-(et les trois autres).
 IA : **zéro IA serveur** — les opérations intelligentes passent par le modèle de l'host
 (`prepare → modèle → save validé`, `mcp-patterns.md` § 4 bis). Un appel LLM serveur se décide par ADR.
 

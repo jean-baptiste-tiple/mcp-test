@@ -11,6 +11,13 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-11-25] — Stack : Vitest 5
+**Quoi :** `vitest` 3.2.4 → 5.1.1, `@vitejs/plugin-react` 4.7 → 6.3, `vite` 8.3.8 ajouté (pair requis par Vitest 5 et plugin-react 6). `vitest.config.ts` devient `vitest.config.mts` (`import.meta.dirname`, ajouté à `tsconfig.json`), comme le template. Les 4 tests de méthode (`tests/unit/{hooks,check-framework-invariants,long-run,sync-method}.test.ts`) reviennent dans `pnpm test` : exclusion `METHOD_TESTS` retirée de la config et de `CLAUDE.md`. `tech-stack.md` à jour.
+**Pourquoi :** montée de stack alignée sur le template dev-framework ; l'exclusion attendait Vitest 5.
+**Problèmes :** aucun : `pnpm verify` passe en entier (37 fichiers, 478 tests), sans `Timeout calling "onTaskUpdate"`. Aucun test applicatif touché.
+**Écarté :** garder `vitest.config.ts` : fonctionne, mais Vite 8 avertit sur le chargeur de config et le glob `testing` de `_index.md` vise déjà `vitest.config.mts`.
+**Fichiers :** `package.json`, `pnpm-lock.yaml`, `vitest.config.mts` (ex-`vitest.config.ts`), `tsconfig.json`, `CLAUDE.md`, `.method/conventions/tech-stack.md`, `docs/changelog.md`
+
 ## [2026-11-25] — Méthode : synchro du template (0d807e0)
 **Quoi :** 23 règles de design contrôlables sur capture (`ui-patterns.md`, `design-review.md`, agents `designer` et `design-critic`, gabarit `design-brief.tmpl.md`) ; reçu fondé sur le contenu de l'arbre (un commit du même arbre ne l'invalide plus, `commit-push` : rebase sans rejouer les checks) ; `check:framework` ignore `.claude/worktrees/`. Fusion de `check-framework-invariants.mjs` et de son test : invariants UI du template toujours retirés.
 **Pourquoi :** correctifs et règles publiés par le template depuis la synchro du 24/11.
