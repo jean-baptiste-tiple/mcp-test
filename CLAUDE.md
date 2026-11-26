@@ -242,6 +242,7 @@ exclus du reçu de vérification : les éditer n'invalide pas des checks déjà 
 - **Une fois terminé :** `pnpm verify` — les 4 checks (`check:framework`, `type-check`, `lint`, `test`) **et** l'écriture du reçu. Ne jamais lancer les 4 commandes séparément.
 - **Diff UI :** `pnpm ui:shots <routes touchées>` avant la review, hors reçu (il démarre un serveur). Les captures sont lues et citées par `revue`, elles ne sont pas versionnées.
 - **Pour commiter :** skill `commit-push`. Il lance `pnpm verify:cached`, qui ne rejoue les checks que si le code a bougé depuis le dernier passage.
+- **Modification de doc seule :** `pnpm verify:cached` ne lance que `check:framework` quand tout ce qui diffère de HEAD est un `.md` sous `.method/`, `docs/`, `.claude/skills/`, `.claude/agents/`, ou `CLAUDE.md` / `README.md` à la racine (`node scripts/verify-receipt.mjs docs-only`). Il écrit un reçu doc (`scope: "docs"`), que le gate n'accepte que si ce qui diffère de HEAD est encore de la doc seule, ou rien (rebase, merge après le commit de doc) ; tout autre commit exige `pnpm verify`, et un reçu doc ne dispense jamais un `verify` mutualisé de tourner.
 - **C'est un gate appliqué, pas une convention.** `.claude/hooks/enforce-git-gate.mjs` bloque tout `git commit` / `git push` direct, et refuse un commit dont le reçu ne couvre pas l'état exact du code. `--no-verify` et `--force` sont bloqués sans échappement possible.
 - **Autre dépôt.** Le gate ne s'applique qu'aux dépôts de cette méthode (`scripts/verify-receipt.mjs` ou reçu présent) : un commit visé par `cd <dir> &&` ou `git -C <dir>` dans un autre dépôt suit le gate de ce dépôt-là (sa propre commande de commit), seuls `--no-verify` et `--force` restent interdits partout. Un projet dérivé qui a son `scripts/verify-receipt.mjs` est jugé par ce script (`node scripts/verify-receipt.mjs check` dans le dérivé), le marqueur restant exigé. Une commande dont les `git` ne visent pas tous le même dépôt (un `-C` et un autre `git`, ou un second `cd`) est jugée comme un commit de ce dépôt-ci : une commande par dépôt. Ne jamais contourner le gate par un autre outil (PowerShell, sous-shell) : si un commit légitime est bloqué, c'est un défaut du hook, à corriger avec son test.
 - **Worktree.** Le gate juge un commit sur le reçu du dépôt que la commande vise (`cd <dir> &&` en tête, ou `git -C <dir>`) : lancer `pnpm verify` puis `git commit` DANS le worktree. Le hook qui s'exécute est celui du checkout de la session : si sa copie est antérieure à ce correctif, ouvrir la session dans le worktree. Pour une branche sans commit, avancer par `git stash -u` → `git reset --hard main` → `git stash pop`. Un worktree fait son propre `pnpm install` : jamais de `node_modules` relié (jonction, lien symbolique) à celui d'un autre checkout, car pnpm refait les liens vers le worktree et vide l'original au run suivant, ce qui casse la session qui y travaille (dev-sofrani, 2026-11-24).
@@ -261,10 +262,16 @@ se **mutualisent** : un seul run, au bon moment, pour tout le monde.
   l'arbre. `node scripts/long-run.mjs status` montre le run en cours et les sessions actives.
 
 **Ce que chaque session fait** (convention, par messages entre sessions) :
-1. **Avant un run long** : `ListAgents`, puis `SendMessage` aux sessions qui travaillent dans ce
-   dossier : « je gèle pour `verify` (+ `build`…) dans ~1 min : finissez l'écriture en cours,
-   répondez si vous devez attendre, ou si vous voulez que j'inclue votre travail ». Attendre les
-   réponses ou ~1 min.
+0. **Destinataires : ce dépôt seulement.** Une session écrite ne reçoit un message que si elle
+   travaille dans CE checkout : vue par `node scripts/long-run.mjs status` (sessions en écriture),
+   ou dont le nom commence par le nom du dépôt (`treso-luciole-72` pour `treso-luciole`). Jamais
+   de diffusion à toutes les sessions de `ListAgents`, jamais de message sur un autre dépôt ni de
+   consigne « un seul verify sur la machine » : un run d'un autre dépôt ne concerne personne ici.
+   Sans destinataire identifié, on n'envoie rien : le gel de `long-run` protège déjà le checkout.
+   *(Décision JB 2026-11-25 : des annonces de gel d'app-pmo arrivaient dans treso-luciole.)*
+1. **Avant un run long** : `SendMessage` aux seules sessions du point 0 : « je gèle pour `verify`
+   (+ `build`…) dans ~1 min : finissez l'écriture en cours, répondez si vous devez attendre, ou si
+   vous voulez que j'inclue votre travail ». Attendre les réponses ou ~1 min.
 2. **Une session qui a besoin du même run ne relance pas** : elle répond « inclus-moi » et attend
    le résultat.
 3. **Après le run** : envoyer le résultat aux sessions prévenues : OK avec le reçu écrit (elles

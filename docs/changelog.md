@@ -11,6 +11,11 @@
 **Fichiers :** Liste des fichiers créés/modifiés
 -->
 
+## [2026-11-26] — Méthode : synchro du template (80c2c2d)
+**Quoi :** reçu doc : une modification de doc seule (`.md` de `.method/`, `docs/`, `.claude/skills/`, `.claude/agents/`, `CLAUDE.md`, `README.md`) ne lance que `check:framework` via `verify:cached`, et le gate n'accepte ce reçu que pour un commit de doc seule ou le rebase qui suit ; messages entre sessions limités aux sessions de ce dépôt (`CLAUDE.md § Plusieurs sessions`, point 0) ; exception « moins de texte » pour l'état vide de première utilisation (`ui-patterns.md`).
+**Pourquoi :** correctifs et règles du template publiés depuis la synchro du 25/11.
+**Fichiers :** `scripts/{verify-receipt,long-run}.mjs`, `.claude/hooks/enforce-git-gate.mjs`, `.githooks/pre-commit`, skills `verify` et `commit-push`, `tests/unit/{hooks,long-run}.test.ts`, `package.json` (`verify:cached`), `CLAUDE.md`, `.method/conventions/ui-patterns.md`.
+
 ## [2026-11-25] — Stack : Vitest 5
 **Quoi :** `vitest` 3.2.4 → 5.1.1, `@vitejs/plugin-react` 4.7 → 6.3, `vite` 8.3.8 ajouté (pair requis par Vitest 5 et plugin-react 6). `vitest.config.ts` devient `vitest.config.mts` (`import.meta.dirname`, ajouté à `tsconfig.json`), comme le template. Les 4 tests de méthode (`tests/unit/{hooks,check-framework-invariants,long-run,sync-method}.test.ts`) reviennent dans `pnpm test` : exclusion `METHOD_TESTS` retirée de la config et de `CLAUDE.md`. `tech-stack.md` à jour.
 **Pourquoi :** montée de stack alignée sur le template dev-framework ; l'exclusion attendait Vitest 5.
